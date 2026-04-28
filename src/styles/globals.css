@@ -1,0 +1,62 @@
+/* Inter — full weight range; we use 300/500/600/800 in the grid hierarchy */
+@import '@fontsource/inter/300.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/inter/800.css';
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: #ffffff;
+  color: #111;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+input::placeholder {
+  color: #111;
+  opacity: 0.32;
+  font-style: normal;
+}
+button {
+  font-family: inherit;
+}
+::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes fadeZoom {
+  0% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scaleX(0.4);
+    transform-origin: left;
+  }
+  50% {
+    opacity: 0.35;
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}

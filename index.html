@@ -1,91 +1,12 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ohtani — fractal topic browser</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  * { box-sizing: border-box; }
-  html, body, #root { height: 100%; margin: 0; padding: 0; }
-  body {
-    background: #FFFFFF;
-    color: #111;
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: geometricPrecision;
-  }
-  input::placeholder {
-    color: #111;
-    opacity: 0.32;
-    font-style: normal;
-  }
-  button { font-family: inherit; }
-
-  .gcell.clickable:hover {
-    background: rgba(17,17,17,0.05) !important;
-  }
-  .gcell.clickable:hover::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border: 1px solid rgba(17,17,17,0.55);
-    pointer-events: none;
-  }
-  .gcell.anchor {
-    background: rgba(17,17,17,0.025);
-  }
-
-  @keyframes fadeZoom {
-    0%   { opacity: 0; transform: scale(1.04); }
-    100% { opacity: 1; transform: scale(1); }
-  }
-
-  /* Subtle loading shimmer for empty cells while loading */
-  .loadingCell {
-    animation: shimmer 1.4s ease-in-out infinite;
-  }
-  @keyframes shimmer {
-    0%, 100% { opacity: 0.12; transform: scaleX(0.4); transform-origin: left; }
-    50%      { opacity: 0.35; transform: scaleX(1); transform-origin: left; }
-  }
-
-  /* Hide scrollbars on the off-chance */
-  ::-webkit-scrollbar { display: none; }
-</style>
-</head>
-<body>
-<div id="root"></div>
-
-<script>
-  // Local shim — replaces the Claude Design playground's window.claude.complete().
-  // Posts the prompt to the local proxy in server.mjs, which forwards to the Anthropic API.
-  window.claude = {
-    async complete(prompt) {
-      const r = await fetch('/api/complete', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-      const body = await r.json().catch(() => ({}));
-      if (!r.ok || body.error) {
-        throw new Error(body.error || `API error (${r.status})`);
-      }
-      return body.completion;
-    },
-  };
-</script>
-
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-
-<script type="text/babel" src="tweaks-panel.jsx"></script>
-<script type="text/babel" src="grid.jsx"></script>
-<script type="text/babel" src="api.jsx"></script>
-<script type="text/babel" src="app.jsx"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ohtani — fractal topic browser</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

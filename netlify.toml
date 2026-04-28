@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[dev]
+  command = "vite"
+  targetPort = 5173
+  port = 8888
+  framework = "vite"
+
+# /api/* in the client maps to the function at /.netlify/functions/* in both dev and prod.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
