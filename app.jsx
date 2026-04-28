@@ -2,18 +2,18 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // ---------- Tweaks defaults ----------
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "accent": "#7A1F1F",
-  "fontFamily": "IBM Plex Mono",
+  "accent": "#ffd700",
+  "fontFamily": "Inter",
   "lineWeight": 1,
   "density": "comfortable",
-  "showCoords": true,
-  "background": "#F5F2EB"
+  "showCoords": false,
+  "background": "#FFFFFF"
 }/*EDITMODE-END*/;
 
 const FONT_STACKS = {
-  "IBM Plex Mono": "'IBM Plex Mono', ui-monospace, Menlo, monospace",
-  "JetBrains Mono": "'JetBrains Mono', ui-monospace, Menlo, monospace",
-  "Söhne Mono": "'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace",
+  "Inter": "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  "Manrope": "'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  "System": "system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
 
 const EXAMPLES = [
@@ -171,13 +171,6 @@ function Breadcrumb({ path, onJump, accent, fontStack, regenerating }) {
       flexWrap: 'wrap',
       lineHeight: 1.4,
     }}>
-      <span style={{
-        fontSize: 10,
-        letterSpacing: '0.18em',
-        textTransform: 'uppercase',
-        opacity: 0.45,
-        marginRight: 14,
-      }}>path</span>
       {path.map((node, i) => {
         const isLast = i === path.length - 1;
         return (
@@ -340,18 +333,6 @@ function App() {
               </button>
               <Breadcrumb path={path} onJump={handleJump} accent={tweaks.accent} fontStack={fontStack} regenerating={regenerating} />
             </div>
-            <div style={{
-              fontSize: 10,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              opacity: 0.45,
-              textAlign: 'right',
-              whiteSpace: 'nowrap',
-              paddingTop: 2,
-            }}>
-              depth · {String(path.length).padStart(2, '0')}<br/>
-              <span style={{ opacity: 0.7 }}>cells · 81</span>
-            </div>
           </div>
 
           {/* Grid */}
@@ -401,14 +382,13 @@ function App() {
 
           {/* Footer */}
           <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            display: 'flex', justifyContent: 'flex-start', alignItems: 'center',
             fontSize: 10,
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
             opacity: 0.4,
           }}>
             <span>tap any cell to descend</span>
-            <span>3 × 3 of 3 × 3 · harada decomposition</span>
           </div>
         </div>
       )}
@@ -427,7 +407,7 @@ function Tweaks({ tweaks, setTweak }) {
       <TweakSelect
         label="Family"
         value={tweaks.fontFamily}
-        options={["IBM Plex Mono", "JetBrains Mono", "Söhne Mono"]}
+        options={["Inter", "Manrope", "System"]}
         onChange={(v) => setTweak('fontFamily', v)}
       />
       <TweakSection label="Grid" />

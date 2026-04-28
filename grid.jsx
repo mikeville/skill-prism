@@ -24,16 +24,26 @@ function blockCellToRC(b, c) {
 // (since both grids are 3x3 with same indexing and block 4 is center)
 
 function GridCell({ row, col, label, content, status, onClick, showCoords, accent, density, fontStack }) {
-  // status: 'topic' | 'anchor' | 'leaf' | 'empty' | 'loading' | 'pathHover'
+  // status: 'topic' | 'centerMain' | 'mirrorMain' | 'leaf' | 'empty' | 'loading'
+  // - topic       (b=4, c=4)  — focal topic (heaviest)
+  // - centerMain  (b=4, c≠4)  — 8 mains in the centermost block
+  // - mirrorMain  (b≠4, c=4)  — 8 mirrored mains anchoring each outer block
+  // - leaf        (b≠4, c≠4)  — 64 sub-sub-skills (lightest)
   const isTopic = status === 'topic';
-  const isAnchor = status === 'anchor';
-  const isClickable = status !== 'topic' && content && status !== 'loading';
+  const isAnchor = status === 'centerMain' || status === 'mirrorMain';
+  const isClickable = !isTopic && content && status !== 'loading';
 
-  const padY = density === 'compact' ? 3 : 5;
+  const padY = density === 'compact' ? 4 : 6;
   const padX = density === 'compact' ? 4 : 6;
   const fs = density === 'compact' ? 9.5 : 10.5;
   const topicFs = density === 'compact' ? 13 : 15;
   const anchorFs = density === 'compact' ? 10.5 : 11.5;
+
+  const fontWeight =
+    isTopic                 ? 800 :
+    status === 'centerMain' ? 600 :
+    status === 'mirrorMain' ? 500 :
+    status === 'leaf'       ? 300 : 400;
 
   return (
     <div
@@ -45,18 +55,18 @@ function GridCell({ row, col, label, content, status, onClick, showCoords, accen
         padding: `${padY}px ${padX}px`,
         fontFamily: fontStack,
         fontSize: isTopic ? topicFs : isAnchor ? anchorFs : fs,
-        fontWeight: isTopic ? 600 : isAnchor ? 500 : 400,
+        fontWeight,
         color: isTopic ? accent : '#111',
         cursor: isClickable ? 'pointer' : 'default',
         position: 'relative',
-        background: isTopic ? 'rgba(122,31,31,0.04)' : 'transparent',
+        background: isTopic ? 'rgba(17,17,17,0.04)' : 'transparent',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: isTopic ? 'center' : 'flex-start',
-        alignItems: isTopic ? 'center' : 'stretch',
-        textAlign: isTopic ? 'center' : 'left',
+        justifyContent: 'center',
+        alignItems: 'center',
+        textAlign: 'center',
         overflow: 'hidden',
-        lineHeight: 1.2,
+        lineHeight: 1.25,
         letterSpacing: '-0.005em',
         transition: 'background 120ms ease, color 120ms ease',
       }}
@@ -117,15 +127,15 @@ function HaradaGrid({ data, onCellClick, showCoords, accent, density, fontStack,
         content = data?.topic || '';
         status = 'topic';
       } else if (b === 4 && c !== 4) {
-        // Anchor cell in center block — one of the 8 main sub-skills
+        // Cell in center block — one of the 8 main sub-skills
         const mainIdx = c < 4 ? c : c - 1; // 0..7
         content = data?.mains?.[mainIdx] || '';
-        status = content ? 'anchor' : (data?.loading ? 'loading' : 'empty');
+        status = content ? 'centerMain' : (data?.loading ? 'loading' : 'empty');
       } else if (b !== 4 && c === 4) {
         // Center of outer block — mirrors the corresponding main (block index in outer ring)
         const mainIdx = b < 4 ? b : b - 1; // 0..7
         content = data?.mains?.[mainIdx] || '';
-        status = content ? 'anchor' : (data?.loading ? 'loading' : 'empty');
+        status = content ? 'mirrorMain' : (data?.loading ? 'loading' : 'empty');
       } else {
         // outer block, outer cell — sub-sub-skill (leaf)
         const subIdx = c < 4 ? c : c - 1;
@@ -193,8 +203,9 @@ function HaradaGrid({ data, onCellClick, showCoords, accent, density, fontStack,
 
 function GridLines({ weight }) {
   // Hairline at every cell boundary (1/9 increments), and a heavier line at every 1/3 boundary.
-  const hair = `rgba(17,17,17,0.10)`;
-  const heavy = `rgba(17,17,17,0.55)`;
+  // Oat tints sourced from Figma variable `grey1` (#cbc6ae).
+  const hair = `rgba(203,198,174,0.5)`;
+  const heavy = `#cbc6ae`;
   const w1 = Math.max(0.5, weight * 0.5);
   const w2 = Math.max(1, weight);
 
