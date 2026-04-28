@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, appendFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +29,37 @@ async function readBody(req) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+// Haiku 4.5 list price as of 2026-04: $1/MTok input, $5/MTok output.
+// Used only for a rough $ estimate in the log; check the console for canonical billing.
+const PRICE_PER_MTOK = {
+  'claude-haiku-4-5-20251001':       { in: 1.00, out: 5.00 },
+  'claude-sonnet-4-6':               { in: 3.00, out: 15.00 },
+  'claude-opus-4-7':                 { in: 15.00, out: 75.00 },
+};
+
+function logUsage(prompt, data) {
+  const usage = data.usage || {};
+  const inTok = usage.input_tokens ?? 0;
+  const outTok = usage.output_tokens ?? 0;
+  const topicMatch = prompt.match(/The (?:topic|FOCUS) is "([^"]+)"/);
+  const topic = topicMatch ? topicMatch[1] : null;
+  const price = PRICE_PER_MTOK[MODEL];
+  const costUsd = price ? (inTok * price.in + outTok * price.out) / 1_000_000 : null;
+
+  const entry = {
+    ts: new Date().toISOString(),
+    model: MODEL,
+    topic,
+    input_tokens: inTok,
+    output_tokens: outTok,
+    estimated_cost_usd: costUsd === null ? null : Number(costUsd.toFixed(6)),
+  };
+  console.log(`[usage] ${topic ?? '(no topic)'} · in=${inTok} out=${outTok}` +
+              (costUsd === null ? '' : ` · ~$${costUsd.toFixed(5)}`));
+  appendFile(join(ROOT, 'usage.jsonl'), JSON.stringify(entry) + '\n')
+    .catch(e => console.error('usage log write failed:', e));
+}
+
 const server = createServer(async (req, res) => {
   try {
     if (req.method === 'POST' && req.url === '/api/complete') {
@@ -54,6 +85,7 @@ const server = createServer(async (req, res) => {
       }
       const data = await r.json();
       const completion = data.content?.[0]?.text ?? '';
+      logUsage(prompt, data);
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ completion }));
       return;
