@@ -22,6 +22,21 @@ const EXAMPLES = [
   "espresso extraction",
 ];
 
+// ---------- Persistent breakdown cache (localStorage) ----------
+// One key per path, prefixed for easy inspection in devtools.
+const CACHE_PREFIX = 'ohtani:cache:';
+function cacheGet(pathKey) {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + pathKey);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function cacheSet(pathKey, value) {
+  try {
+    localStorage.setItem(CACHE_PREFIX + pathKey, JSON.stringify(value));
+  } catch {} // quota exceeded or storage disabled — fail silent
+}
+
 // ---------- Empty state ----------
 function EmptyState({ onSubmit, accent, fontStack }) {
   const [val, setVal] = useState('');
@@ -235,6 +250,7 @@ function App() {
     try {
       const out = await generateBreakdown({ topic, path: newPath });
       if (reqIdRef.current !== reqId) return; // stale
+      cacheSet(JSON.stringify(newPath), { mains: out.mains, subs: out.subs });
       setData({ topic, mains: out.mains, subs: out.subs, loading: false });
     } catch (e) {
       if (reqIdRef.current !== reqId) return;
@@ -245,38 +261,33 @@ function App() {
     }
   }, []);
 
-  const handleSubmit = (topic) => {
-    const newPath = [topic];
+  const navigateTo = useCallback((newPath) => {
     setPath(newPath);
     setZoomKey(k => k + 1);
+    setError(null);
+
+    const cached = cacheGet(JSON.stringify(newPath));
+    if (cached) {
+      reqIdRef.current++; // invalidate any in-flight request
+      const topic = newPath[newPath.length - 1];
+      setData({ topic, mains: cached.mains, subs: cached.subs, loading: false });
+      setRegenerating(false);
+      return;
+    }
     generateFor(newPath);
-  };
+  }, [generateFor]);
+
+  const handleSubmit = (topic) => navigateTo([topic]);
 
   const handleCellClick = ({ kind, term, anchor }) => {
-    // anchor click: descend one level (term becomes new center)
-    // leaf click: descend two implicit levels — anchor is actually the path step too (we're going from current to that leaf)
-    // BUT the leaf is shown as a sub-sub-skill of the current focus. So the path adds [anchor, term] OR just [term]?
-    // Spec: "tap any cell -> that cell becomes new center; full grid regenerates with the path passed".
-    // So leaf clicks descend by ONE step (just term), with the implicit understanding that the leaf was reached
-    // through `anchor`. We'll include both in the path for context fidelity, since that's what the API needs.
-    let newPath;
-    if (kind === 'leaf') {
-      newPath = [...path, anchor, term];
-    } else {
-      newPath = [...path, term];
-    }
-    setPath(newPath);
+    const newPath = kind === 'leaf' ? [...path, anchor, term] : [...path, term];
     setZoomTrigger({ key: Date.now() });
-    setZoomKey(k => k + 1);
-    generateFor(newPath);
+    navigateTo(newPath);
   };
 
   const handleJump = (idx) => {
     if (idx >= path.length - 1) return;
-    const newPath = path.slice(0, idx + 1);
-    setPath(newPath);
-    setZoomKey(k => k + 1);
-    generateFor(newPath);
+    navigateTo(path.slice(0, idx + 1));
   };
 
   const handleReset = () => {
