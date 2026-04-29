@@ -1,39 +1,36 @@
-import { useEffect, useState, type CSSProperties } from 'react';
-import styles from './Breadcrumb.module.css';
+import { useEffect, useState } from 'react';
 
 type Props = {
   path: string[];
   onJump: (idx: number) => void;
-  accent: string;
-  fontStack: string;
   regenerating: boolean;
 };
 
-export function Breadcrumb({ path, onJump, accent, fontStack, regenerating }: Props) {
+export function Breadcrumb({ path, onJump, regenerating }: Props) {
   return (
-    <div
-      className={styles.root}
-      style={{ '--accent': accent, fontFamily: fontStack } as CSSProperties}
-    >
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-meta">
       {path.map((node, i) => {
         const isLast = i === path.length - 1;
         return (
-          <span key={i}>
+          <span key={i} className="flex items-baseline gap-x-2">
             <button
               type="button"
               onClick={() => !isLast && onJump(i)}
               disabled={isLast}
-              className={styles.crumbButton}
-              style={{ fontFamily: fontStack }}
+              className={
+                isLast
+                  ? 'text-ink font-secondary cursor-default'
+                  : 'text-ink-mut hover:text-ink transition-colors duration-hover'
+              }
             >
               {node}
             </button>
-            {!isLast && <span className={styles.separator}>/</span>}
+            {!isLast && <span className="text-ink-faint select-none">/</span>}
           </span>
         );
       })}
       {regenerating && (
-        <span className={styles.regen} style={{ color: accent }}>
+        <span className="text-meta text-ink-mut flex items-center gap-1 ml-2">
           <Pulse /> regenerating
         </span>
       )}
@@ -47,5 +44,5 @@ function Pulse() {
     const id = setInterval(() => setT((x) => (x + 1) % 4), 250);
     return () => clearInterval(id);
   }, []);
-  return <span className={styles.pulse}>{'·'.repeat(t)}</span>;
+  return <span className="inline-block w-5 text-left">{'·'.repeat(t)}</span>;
 }

@@ -40,7 +40,7 @@ export function useBreakdown(path: string[]): UseBreakdownResult {
 
     // Cache miss — fetch.
     const reqId = ++reqIdRef.current;
-    setData({ topic, mains: [], subs: {}, loading: true });
+    setData({ topic, mains: [], subs: [], loading: true });
     setRegenerating(true);
     setError(null);
 
@@ -53,7 +53,7 @@ export function useBreakdown(path: string[]): UseBreakdownResult {
       } catch (e) {
         if (reqIdRef.current !== reqId) return;
         setError(e instanceof Error ? e.message : 'Generation failed.');
-        setData({ topic, mains: [], subs: {}, loading: false });
+        setData({ topic, mains: [], subs: [], loading: false });
       } finally {
         if (reqIdRef.current === reqId) setRegenerating(false);
       }

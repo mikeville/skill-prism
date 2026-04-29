@@ -1,9 +1,4 @@
-// Client-side API: builds the prompt, posts to /api/complete (the Netlify function),
-// parses the JSON breakdown, and returns a typed Breakdown.
-// The prototype's window.claude.complete shim is gone — this fetches directly.
-
 import type { Breakdown } from '../types';
-import { MAIN_TO_BLOCK } from './gridMapping';
 import { buildPrompt } from './prompt';
 
 export async function generateBreakdown({
@@ -30,7 +25,6 @@ export async function generateBreakdown({
   return parseBreakdown(raw);
 }
 
-// Strip fences, locate the JSON object, parse, and pad to exactly 8/8/8.
 function parseBreakdown(raw: string): Breakdown {
   let cleaned = raw.trim();
   if (cleaned.startsWith('```')) {
@@ -53,19 +47,18 @@ function parseBreakdown(raw: string): Breakdown {
     : [];
   while (mains.length < 8) mains.push('');
 
-  const subs: Record<number, string[]> = {};
+  const subs: string[][] = [];
   if (Array.isArray(parsed.subs)) {
     for (let i = 0; i < 8; i++) {
-      const blockIdx = MAIN_TO_BLOCK[i];
       const rawRow = (parsed.subs as unknown[])[i];
       const row: string[] = Array.isArray(rawRow)
         ? (rawRow as unknown[]).slice(0, 8).map((x) => String(x ?? ''))
         : [];
       while (row.length < 8) row.push('');
-      subs[blockIdx] = row;
+      subs.push(row);
     }
   } else {
-    for (let i = 0; i < 8; i++) subs[MAIN_TO_BLOCK[i]] = ['', '', '', '', '', '', '', ''];
+    for (let i = 0; i < 8; i++) subs.push(['', '', '', '', '', '', '', '']);
   }
 
   return { mains, subs };

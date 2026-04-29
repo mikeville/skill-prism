@@ -3,7 +3,7 @@
 
 import type { Breakdown } from '../types';
 
-const PREFIX = 'ohtani:cache:v1:';
+const PREFIX = 'ohtani:cache:v2:';
 
 export function pathKey(path: string[]): string {
   return JSON.stringify(path);
@@ -18,8 +18,8 @@ export function cacheGet(path: string[]): Breakdown | null {
       !parsed ||
       !Array.isArray(parsed.mains) ||
       parsed.mains.length !== 8 ||
-      !parsed.subs ||
-      typeof parsed.subs !== 'object'
+      !Array.isArray(parsed.subs) ||
+      parsed.subs.length !== 8
     ) {
       return null;
     }
