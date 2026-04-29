@@ -1,17 +1,25 @@
 // LocalStorage-backed cache for breakdowns. Per-user, per-browser.
 // Schema-versioned via the prefix so we can bump on breaking changes.
+//
+// Keyed by the LAST term in the path (normalized) rather than the full path.
+// This means revisiting a topic reuses its breakdown regardless of which parent
+// path led there — so e.g. "Burr types" reached from the top-level grid hits
+// the same cache entry as "Burr types" reached via "Grind mechanics".
 
 import type { Breakdown } from '../types';
 
-const PREFIX = 'ohtani:cache:v2:';
+const PREFIX = 'ohtani:cache:v3:';
 
 export function pathKey(path: string[]): string {
-  return JSON.stringify(path);
+  const last = path[path.length - 1] ?? '';
+  return last.toLowerCase().trim();
 }
 
 export function cacheGet(path: string[]): Breakdown | null {
+  const key = pathKey(path);
+  if (!key) return null;
   try {
-    const raw = localStorage.getItem(PREFIX + pathKey(path));
+    const raw = localStorage.getItem(PREFIX + key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Breakdown;
     if (
@@ -30,8 +38,10 @@ export function cacheGet(path: string[]): Breakdown | null {
 }
 
 export function cacheSet(path: string[], value: Breakdown): void {
+  const key = pathKey(path);
+  if (!key) return;
   try {
-    localStorage.setItem(PREFIX + pathKey(path), JSON.stringify(value));
+    localStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch {
     // Quota exceeded or storage disabled — fail silent.
   }

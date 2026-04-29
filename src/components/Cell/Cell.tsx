@@ -12,24 +12,24 @@ type CellProps = {
 };
 
 const tierFill: Record<Tier, string> = {
-  primary: 'bg-gold-primary',
-  secondary: 'bg-gold-secondary',
-  tertiary: 'bg-paper',
+  primary: 'bg-paper',
+  secondary: 'bg-fill-secondary',
+  tertiary: 'bg-fill-tertiary',
 };
 
 const tierType: Record<Tier, string> = {
-  primary: 'text-primary md:text-primary-d font-primary',
-  secondary: 'text-secondary md:text-secondary-d font-secondary',
-  tertiary: 'text-tertiary md:text-tertiary-d font-tertiary',
+  primary: 'text-primary font-primary text-ink',
+  secondary: 'text-secondary font-secondary text-ink',
+  tertiary: 'text-tertiary font-tertiary text-ink-mut',
 };
 
 export function Cell({ tier, state, content, onClick, children, cellRef }: CellProps) {
   const clickable = !!onClick && state === 'content';
 
   const base =
-    'relative flex items-center justify-center text-center text-ink overflow-hidden ' +
+    'relative flex items-center justify-center text-center overflow-hidden ' +
     'transition-colors duration-hover w-full h-full p-2';
-  const hover = clickable ? 'cursor-pointer hover:bg-ink/5' : '';
+  const hover = clickable ? 'cursor-pointer hover:bg-fill-page' : '';
   const fill = tierFill[tier];
   const type = tierType[tier];
 

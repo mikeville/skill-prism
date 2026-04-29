@@ -16,9 +16,3 @@ export type DataState = {
   subs: string[][];
   loading: boolean;
 };
-
-export type TweakValues = {
-  density: 'compact' | 'comfortable';
-  showCoords: boolean;
-  depthOverride: 'auto' | '1' | '2';
-};
