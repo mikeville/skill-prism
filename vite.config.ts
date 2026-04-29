@@ -1,11 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { apiCompleteProxy } from './vite-plugins/api-complete';
+import { tailwindConfigHmr } from './vite-plugins/tailwind-config-hmr';
 
-// `netlify dev` wraps Vite and forwards /api/* to functions via netlify.toml redirects.
-// For pure-Vite (`npm run dev:vite`) without the function, calls to /api/* will 404 —
-// run `npm run dev` (which uses `netlify dev`) for the full local stack.
+// Dev: `npm run dev` (just `vite`).
+//   - apiCompleteProxy handles /api/complete inline (no `netlify dev` wrapper).
+//   - tailwindConfigHmr makes tailwind.config.js edits hot-reload in ~100ms.
+// Prod: built dist/ is served by Netlify; /api/complete hits netlify/functions/complete.ts.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), apiCompleteProxy(), tailwindConfigHmr()],
   server: {
     port: 5173,
   },
