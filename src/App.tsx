@@ -2,20 +2,21 @@ import { useRef } from 'react';
 import { EmptyState } from './components/EmptyState/EmptyState';
 import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
-import type { ZoomOrigin } from './components/FractalView/FractalView';
+import type { ZoomIntent } from './components/FractalView/FractalView';
 import { Topbar } from './components/Topbar/Topbar';
 import { useBreakdown } from './hooks/useBreakdown';
 import { usePath } from './hooks/usePath';
 import { useViewportDepth } from './hooks/useViewportDepth';
+import { cacheGet } from './lib/cache';
 
 export default function App() {
   const [path, setPath] = usePath();
   const { data, regenerating, error } = useBreakdown(path);
   const depth = useViewportDepth();
-  const zoomOrigin = useRef<ZoomOrigin>(null);
+  const zoomIntent = useRef<ZoomIntent | null>(null);
 
   const handleSubmit = (topic: string) => {
-    zoomOrigin.current = null;
+    zoomIntent.current = null;
     setPath([topic]);
   };
 
@@ -30,12 +31,18 @@ export default function App() {
 
   const handleJump = (idx: number) => {
     if (idx >= path.length - 1) return;
-    zoomOrigin.current = null;
-    setPath(path.slice(0, idx + 1));
+    const newPath = path.slice(0, idx + 1);
+    // Find the cell of `path[idx+1]` (the immediate child we're leaving) inside the new
+    // parent grid, so the zoom-out has a target to anchor on.
+    const targetTerm = path[idx + 1];
+    const parentBreakdown = cacheGet(newPath);
+    const mainsIdx = parentBreakdown ? parentBreakdown.mains.indexOf(targetTerm) : -1;
+    zoomIntent.current = mainsIdx >= 0 ? { kind: 'out', mainsIdx } : null;
+    setPath(newPath);
   };
 
   const handleReset = () => {
-    zoomOrigin.current = null;
+    zoomIntent.current = null;
     setPath([]);
   };
 
@@ -58,7 +65,7 @@ export default function App() {
               data={data}
               depth={depth}
               onCellClick={handleCellClick}
-              zoomOrigin={zoomOrigin}
+              zoomIntent={zoomIntent}
             />
             {error && (
               <div className="absolute bottom-4 left-8 bg-paper border-cell border-ink px-2 py-1 text-meta font-meta">

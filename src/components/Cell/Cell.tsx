@@ -9,6 +9,8 @@ type CellProps = {
   onClick?: () => void;
   children?: ReactNode;
   cellRef?: (el: HTMLDivElement | null) => void;
+  // compact secondaries (the 8 in the center 3x3) keep the dark ink color but borrow tertiary's smaller type size.
+  compact?: boolean;
 };
 
 const tierFill: Record<Tier, string> = {
@@ -23,7 +25,9 @@ const tierType: Record<Tier, string> = {
   tertiary: 'text-tertiary font-tertiary text-ink-mut',
 };
 
-export function Cell({ tier, state, content, onClick, children, cellRef }: CellProps) {
+const compactSecondaryType = 'text-tertiary font-secondary text-ink';
+
+export function Cell({ tier, state, content, onClick, children, cellRef, compact }: CellProps) {
   const clickable = !!onClick && state === 'content';
 
   const base =
@@ -31,7 +35,7 @@ export function Cell({ tier, state, content, onClick, children, cellRef }: CellP
     'transition-colors duration-hover w-full h-full p-2';
   const hover = clickable ? 'cursor-pointer hover:bg-fill-page' : '';
   const fill = tierFill[tier];
-  const type = tierType[tier];
+  const type = compact && tier === 'secondary' ? compactSecondaryType : tierType[tier];
 
   return (
     <div

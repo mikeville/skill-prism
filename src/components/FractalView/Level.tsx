@@ -123,6 +123,8 @@ export function Level({
         const state: CellState = term ? 'content' : loading ? 'loading' : 'empty';
 
         const childTier: Tier = trail != null ? 'tertiary' : 'secondary';
+        // Center-3x3 secondaries get compact (tertiary-sized) type, keeping ink color.
+        const compact = trail == null;
 
         const refKey: CellRefKey =
           trail != null ? { mainIdx: trail.mainIdx, subIdx: childIdx } : { mainIdx: childIdx };
@@ -140,6 +142,7 @@ export function Level({
             content={term}
             onClick={state === 'content' ? click : undefined}
             cellRef={(el) => registerCell?.(refKey, el)}
+            compact={compact}
           />
         );
       })}
