@@ -1,3 +1,5 @@
+import { hyphenateSync } from 'hyphen/en';
+
 // Per-tier presets for the multi-line fit. Roboto Flex axis ranges:
 // wght 100-1000, wdth 25-151, opsz 8-144. We stay inside those.
 export type FitTier = 'primary' | 'secondary' | 'tertiary';
@@ -28,47 +30,140 @@ const SLACK_PX = 1; // accept overflow up to 1px to terminate binary search earl
 // line if they trail at the end. Equation-y inputs ("(A - λI)v = 0") collapse
 // onto a single line because all the short fragments glom together.
 //
-// Context-aware breaking: when cell dimensions are provided, a token gets
-// broken into two halves only if doing so would yield a noticeably bigger
-// font-size in this specific cell. We compare two fits:
-//   - keep-intact size = min(target line height, cellW / (kCharWidth × len))
-//   - broken size = min(target line height with one extra line, cellW / (kCharWidth × ceil(len/2)))
-// and break only when broken size beats intact size by ≥15%. That keeps
-// "DETERMINANTS" in 2X2 DETERMINANTS intact (width-bound size 66 vs broken
-// height-bound 61), but breaks "PERIODIZATION" alone in a narrow cell
-// (width-bound 61 vs broken height-bound 91).
+// Context-aware breaking: long tokens get split at the closest TeX-style
+// hyphenation point to the middle of the word (handled by the npm `hyphen`
+// package — same algorithm Knuth's TeX uses). The decision to actually
+// break is measurement-driven: we predict the resulting fontSize for both
+// the intact and broken layouts using a hidden offscreen span and break
+// only when broken would meaningfully fill the cell better.
 const ABSOLUTE_LONG_THRESHOLD = 16; // always break above this length regardless of cell
-const ABSOLUTE_OK_THRESHOLD = 12; // never break at or below this length — common
-//                                  words like DETERMINANTS (12), EIGENVALUES (11),
-//                                  APPLICATIONS (12) stay intact since the midpoint
-//                                  break ("EIGENV-ALUES") is more disorienting than
-//                                  the smaller font.
-// Approximate per-char width at min wdth (≈25%) in em units, derived from
-// browser measurements of Roboto Flex caps at wMin/gMin.
-const K_CHAR_WIDTH_EM = 0.18;
-const BREAK_BENEFIT_RATIO = 1.15; // broken must be ≥15% bigger to justify the hyphen
+const ABSOLUTE_OK_THRESHOLD = 10; // never break at or below this length — short words
+//                                  (POLYNOMIAL, etc.) stay intact unconditionally;
+//                                  longer words become candidates and the fill criterion
+//                                  decides per cell.
+const FILL_BENEFIT_RATIO = 1.2; // broken must fill ≥20% more of the cell to justify the
+//                                hyphen — so a slightly fuller cell isn't enough; the
+//                                gain has to be visible.
+const MIN_INTACT_FILL = 0.7; // OR break when intact under-fills this much regardless of
+//                              the ratio (a 1-line word that only fills 50% of a tall
+//                              cell gets broken even if broken_fill = 0.7).
 
-function breakLongToken(token: string): string {
-  const mid = Math.ceil(token.length / 2);
-  return token.slice(0, mid) + '-\n' + token.slice(mid);
+// ---------- Hyphenation-aware break-point selection ----------
+// Pick the hyphenation point closest to the middle of the token. Falls back
+// to the midpoint if the word has no hyphenation points (rare for ≥12-char
+// English words but possible for compound / coined terms).
+function findBreakPosition(token: string): number {
+  const lower = token.toLowerCase();
+  const SEP = '­'; // soft hyphen — rare in input, safe to use as marker
+  let hyphenated: string;
+  try {
+    hyphenated = hyphenateSync(lower, { hyphenChar: SEP });
+  } catch {
+    return Math.ceil(token.length / 2);
+  }
+  const positions: number[] = [];
+  let pos = 0;
+  for (const ch of hyphenated) {
+    if (ch === SEP) positions.push(pos);
+    else pos++;
+  }
+  if (positions.length === 0) return Math.ceil(token.length / 2);
+  const mid = token.length / 2;
+  let best = positions[0];
+  let bestDist = Math.abs(best - mid);
+  for (const p of positions) {
+    const d = Math.abs(p - mid);
+    if (d < bestDist) {
+      best = p;
+      bestDist = d;
+    }
+  }
+  return best;
 }
 
-function tokenSize(len: number, cellW: number, cellH: number, lineCount: number): number {
-  return Math.min(cellH / (lineCount * LINE_HEIGHT), cellW / (K_CHAR_WIDTH_EM * len));
+function breakLongToken(token: string): string {
+  const pos = findBreakPosition(token);
+  if (pos < 1 || pos >= token.length) return token;
+  return token.slice(0, pos) + '-\n' + token.slice(pos);
+}
+
+// ---------- Real DOM-measured size prediction ----------
+let measureEl: HTMLSpanElement | null = null;
+function getMeasureEl(): HTMLSpanElement | null {
+  if (typeof document === 'undefined') return null;
+  if (!measureEl) {
+    measureEl = document.createElement('span');
+    measureEl.style.position = 'absolute';
+    measureEl.style.left = '-9999px';
+    measureEl.style.top = '-9999px';
+    measureEl.style.fontFamily = '"Roboto Flex Variable", Inter, sans-serif';
+    measureEl.style.whiteSpace = 'nowrap';
+    measureEl.style.lineHeight = '1';
+    measureEl.style.textTransform = 'uppercase';
+    measureEl.style.visibility = 'hidden';
+    measureEl.style.pointerEvents = 'none';
+    measureEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(measureEl);
+  }
+  return measureEl;
+}
+
+const PROBE_SIZE = 100;
+function probeWidth(text: string, wdth: number, wght: number): number {
+  const el = getMeasureEl();
+  if (!el) return text.length * PROBE_SIZE * 0.18; // SSR fallback
+  el.style.fontSize = `${PROBE_SIZE}px`;
+  el.style.fontVariationSettings = `"wdth" ${wdth}, "wght" ${wght}, "opsz" ${PROBE_SIZE}`;
+  el.textContent = text;
+  return el.offsetWidth;
+}
+
+// Predict the largest fontSize at which `text` fits within `cellW` at the
+// given axes. Linear scaling: width is proportional to fontSize.
+function predictMaxSize(text: string, cellW: number, wdth: number, wght: number): number {
+  const w = probeWidth(text, wdth, wght);
+  if (w <= 0) return PROBE_SIZE;
+  return (PROBE_SIZE * cellW) / w;
+}
+
+// ---------- Break decision ----------
+function fillRatio(fontSize: number, lineCount: number, cellH: number): number {
+  return Math.min(1, (lineCount * fontSize * LINE_HEIGHT) / cellH);
 }
 
 function shouldBreak(
-  tokenLength: number,
+  token: string,
   cellW: number | undefined,
   cellH: number | undefined,
   lineCount: number,
 ): boolean {
-  if (tokenLength <= ABSOLUTE_OK_THRESHOLD) return false;
-  if (tokenLength > ABSOLUTE_LONG_THRESHOLD) return true;
+  const len = token.length;
+  if (len <= ABSOLUTE_OK_THRESHOLD) return false;
+  if (len > ABSOLUTE_LONG_THRESHOLD) return true;
   if (!cellW || !cellH) return false;
-  const intactSize = tokenSize(tokenLength, cellW, cellH, lineCount);
-  const brokenSize = tokenSize(Math.ceil(tokenLength / 2), cellW, cellH, lineCount + 1);
-  return brokenSize > intactSize * BREAK_BENEFIT_RATIO;
+
+  // Intact prediction: width-bound at min wdth/wght, capped by per-line height.
+  const intactWidthBound = predictMaxSize(token, cellW, 25, 200);
+  const intactHeightBound = cellH / (lineCount * LINE_HEIGHT);
+  const intactSize = Math.min(intactWidthBound, intactHeightBound);
+  const intactFill = fillRatio(intactSize, lineCount, cellH);
+
+  // Broken prediction: take the longer half (with trailing hyphen) as the
+  // binding chunk, since the shorter half always fits at the same size.
+  const pos = findBreakPosition(token);
+  const left = token.slice(0, pos);
+  const right = token.slice(pos);
+  const longer = left.length >= right.length ? `${left}-` : right;
+  const brokenWidthBound = predictMaxSize(longer, cellW, 25, 200);
+  const brokenHeightBound = cellH / ((lineCount + 1) * LINE_HEIGHT);
+  const brokenSize = Math.min(brokenWidthBound, brokenHeightBound);
+  const brokenFill = fillRatio(brokenSize, lineCount + 1, cellH);
+
+  // Break if breaking meaningfully fills the cell better, or if intact
+  // dramatically under-fills and broken at least matches it.
+  if (brokenFill > intactFill * FILL_BENEFIT_RATIO) return true;
+  if (intactFill < MIN_INTACT_FILL && brokenFill >= intactFill) return true;
+  return false;
 }
 
 export function splitLines(text: string, cellW?: number, cellH?: number): string[] {
@@ -82,7 +177,7 @@ export function splitLines(text: string, cellW?: number, cellH?: number): string
   const lineCount = Math.max(1, longTokenCount);
 
   const broken = tokens
-    .map((t) => (shouldBreak(t.length, cellW, cellH, lineCount) ? breakLongToken(t) : t))
+    .map((t) => (shouldBreak(t, cellW, cellH, lineCount) ? breakLongToken(t) : t))
     .join(' ');
   return broken
     .split('\n')
