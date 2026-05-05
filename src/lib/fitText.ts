@@ -9,12 +9,20 @@ export type FitPreset = {
 };
 
 export const PRESETS: Record<FitTier, FitPreset> = {
-  primary: { fontSize: [10, 220], wdth: [25, 151], wght: [200, 1000] },
-  secondary: { fontSize: [10, 180], wdth: [25, 151], wght: [200, 1000] },
-  tertiary: { fontSize: [8, 120], wdth: [25, 151], wght: [200, 1000] },
+  primary: { fontSize: [8, 320], wdth: [25, 151], wght: [200, 1000] },
+  secondary: { fontSize: [8, 240], wdth: [25, 151], wght: [200, 1000] },
+  tertiary: { fontSize: [8, 160], wdth: [25, 151], wght: [200, 1000] },
 };
 
+// Line-box-to-fontSize ratio for our caps-only display. Roboto Flex's cap
+// height is roughly 0.72em; leading is set to this value via inline style on
+// each line span so the line-box is exactly cap-height tall (text flush with
+// line-box top/bottom). fontSize is then set to allottedHeight / LINE_HEIGHT
+// so that numLines × lineBox === cellHeight, fully consuming vertical space.
+export const LINE_HEIGHT = 0.78;
+
 const SLACK_PX = 1; // accept overflow up to 1px to terminate binary search early
+const MAX_TRACKING_EM = 0.6; // cap letter-spacing at 0.6em — beyond this it reads as separated
 
 // Group tokens so every word ≥3 chars gets its own line; words ≤2 chars
 // (e.g. "of", "in", "QR") attach to the next long token, or to the previous
@@ -45,6 +53,10 @@ function applyAxes(el: HTMLElement, fontSize: number, wdth: number, wght: number
   el.style.fontVariationSettings = `"wdth" ${wdth}, "wght" ${wght}, "opsz" ${fontSize}`;
 }
 
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
 // Binary search for the largest value in [lo, hi] for which probe(v) returns true.
 // Returns lo if no value in the range fits.
 function searchMax(lo: number, hi: number, probe: (v: number) => boolean, iters = 7): number {
@@ -64,50 +76,69 @@ function searchMax(lo: number, hi: number, probe: (v: number) => boolean, iters 
   return best;
 }
 
-// Fit a single line span to a target width with the policy:
-//   1. Default to the widest + boldest settings.
-//   2. Grow size up to sCeil; if width fits at sCeil, line is height-bound — keep it.
-//   3. Otherwise binary-search size down until width fits at max wdth/wght.
-//   4. If even sMin overflows, reduce wdth, then reduce wght.
-function fitLine(el: HTMLElement, cellW: number, maxLineH: number, preset: FitPreset) {
+// Fit a single line, prioritizing simultaneous width AND height fill:
+//   1. Pick targetSize so the line-box height matches its allotted vertical
+//      share (size = allottedH / LINE_HEIGHT — text is then flush with cell
+//      top + bottom edges).
+//   2. At max wdth + max wght, measure width.
+//      a. If width fits and there's slack, expand letter-spacing (tracking)
+//         until the line is flush with both horizontal edges.
+//      b. If width overflows, drop tracking and reduce wdth → wght → size in
+//         that order until it fits.
+function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitPreset) {
   const [sMin, sMax] = preset.fontSize;
   const [wMin, wMax] = preset.wdth;
   const [gMin, gMax] = preset.wght;
-  const sCeil = Math.min(sMax, Math.max(sMin, maxLineH));
 
+  el.style.letterSpacing = '0';
+  const targetSize = clamp(allottedH / LINE_HEIGHT, sMin, sMax);
   const fitsW = () => el.scrollWidth <= cellW + SLACK_PX;
+  const charCount = (el.textContent || '').length;
 
-  // Step 1: try sCeil with widest + boldest. If width fits, we're height-bound.
-  applyAxes(el, sCeil, wMax, gMax);
-  if (fitsW()) return;
-
-  // Step 2: width overflows at sCeil. Does it fit at sMin?
-  applyAxes(el, sMin, wMax, gMax);
+  // Step 1: max wdth/wght at targetSize.
+  applyAxes(el, targetSize, wMax, gMax);
   if (fitsW()) {
-    const size = searchMax(sMin, sCeil, (s) => {
-      applyAxes(el, s, wMax, gMax);
-      return fitsW();
-    });
-    applyAxes(el, size, wMax, gMax);
+    // Width has slack — push letter-spacing to consume it.
+    const slack = cellW - el.scrollWidth;
+    if (slack > SLACK_PX && charCount > 1) {
+      // Letter-spacing applies once per character (including a trailing one in
+      // most browsers), so divide slack by charCount, not (charCount - 1).
+      const lsCap = MAX_TRACKING_EM * targetSize;
+      const ls = clamp(slack / charCount, 0, lsCap);
+      el.style.letterSpacing = `${ls}px`;
+      // Verify; back off proportionally if we overshot the cell edge.
+      if (el.scrollWidth > cellW + SLACK_PX) {
+        const overshoot = el.scrollWidth - cellW;
+        const adjusted = Math.max(0, ls - overshoot / charCount);
+        el.style.letterSpacing = `${adjusted}px`;
+      }
+    }
     return;
   }
 
-  // Step 3: even sMin overflows at max wdth. Reduce wdth at sMin.
+  // Step 2: width overflows at max wdth/wght. Reduce wdth.
   const wdth = searchMax(wMin, wMax, (w) => {
-    applyAxes(el, sMin, w, gMax);
+    applyAxes(el, targetSize, w, gMax);
     return fitsW();
   });
-  applyAxes(el, sMin, wdth, gMax);
+  applyAxes(el, targetSize, wdth, gMax);
   if (fitsW()) return;
 
-  // Step 4: still overflowing. Reduce wght at sMin/wMin.
+  // Step 3: still overflowing. Reduce wght at sMin equivalent (targetSize/wMin).
   const wght = searchMax(gMin, gMax, (g) => {
-    applyAxes(el, sMin, wMin, g);
+    applyAxes(el, targetSize, wMin, g);
     return fitsW();
   });
-  applyAxes(el, sMin, wMin, wght);
-  // If still overflowing, the cell's overflow:hidden clips. There's nothing
-  // more to give once we're at min size + min wdth + min wght.
+  applyAxes(el, targetSize, wMin, wght);
+  if (fitsW()) return;
+
+  // Step 4: even at wMin/gMin we overflow. Shrink size below targetSize. The
+  // line will under-fill vertically but at least won't get clipped horizontally.
+  const newSize = searchMax(sMin, targetSize, (s) => {
+    applyAxes(el, s, wMin, gMin);
+    return fitsW();
+  });
+  applyAxes(el, newSize, wMin, gMin);
 }
 
 export function fitMultiline(container: HTMLElement, tier: FitTier) {
@@ -123,9 +154,9 @@ export function fitMultiline(container: HTMLElement, tier: FitTier) {
   const cellH = container.clientHeight - padY;
   if (cellW < 4 || cellH < 4) return;
 
-  const maxLineH = cellH / lines.length;
+  const allottedH = cellH / lines.length;
   const preset = PRESETS[tier];
-  for (const line of lines) fitLine(line, cellW, maxLineH, preset);
+  for (const line of lines) fitLine(line, cellW, allottedH, preset);
 }
 
 export function clearFit(container: HTMLElement) {
@@ -135,5 +166,6 @@ export function clearFit(container: HTMLElement) {
   for (const line of lines) {
     line.style.fontSize = '';
     line.style.fontVariationSettings = '';
+    line.style.letterSpacing = '';
   }
 }

@@ -3,7 +3,7 @@ import type { CellState, Tier } from '../../types';
 import { Skeleton } from './Skeleton';
 import { useTypeMode } from '../../contexts/TypeMode';
 import { useFitText } from '../../hooks/useFitText';
-import { splitLines, type FitTier } from '../../lib/fitText';
+import { splitLines, LINE_HEIGHT, type FitTier } from '../../lib/fitText';
 
 type CellProps = {
   tier: Tier;
@@ -88,8 +88,11 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
             {lines.map((line, i) => (
               <span
                 key={i}
-                className="block whitespace-nowrap leading-none"
-                style={{ fontVariationSettings: '"wdth" 100, "wght" 600' }}
+                className="block whitespace-nowrap"
+                style={{
+                  lineHeight: LINE_HEIGHT,
+                  fontVariationSettings: '"wdth" 100, "wght" 600',
+                }}
               >
                 {line}
               </span>
