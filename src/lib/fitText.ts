@@ -49,9 +49,95 @@ const MIN_INTACT_FILL = 0.7; // OR break when intact under-fills this much regar
 //                              cell gets broken even if broken_fill = 0.7).
 
 // ---------- Hyphenation-aware break-point selection ----------
-// Pick the hyphenation point closest to the middle of the token. Falls back
-// to the midpoint if the word has no hyphenation points (rare for ≥12-char
-// English words but possible for compound / coined terms).
+// Pick the hyphenation point closest to the middle of the token. TeX patterns
+// handle most compound words well (POWER-LIFTING, BODY-BUILDING, BROAD-CASTING)
+// because the patterns recognize multiple syllable boundaries. But some words
+// — most notably WEIGHTLIFTING — are stored in the TeX dictionary with a
+// single explicit hyphenation (`weightlift-ing`) that puts a tiny suffix on
+// one side. When that happens we treat the result as suspicious and reach
+// for a syllable-aware midpoint break instead of accepting the lopsided one.
+const SHORT_SUFFIX_LEN = 3; // ≤ this many chars on the right is "suspicious"
+const LONG_PREFIX_LEN = 7; // and ≥ this many chars on the left means we should
+//                           try harder for a balanced break (the long stem
+//                           probably hides a compound-word boundary)
+
+const COMMON_CONSONANT_CLUSTERS = new Set([
+  // English word-initial consonant pairs that read naturally.
+  'br', 'bl', 'ch', 'cl', 'cr', 'dr', 'fl', 'fr', 'gl', 'gr',
+  'pl', 'pr', 'sc', 'sh', 'sk', 'sl', 'sm', 'sn', 'sp', 'st',
+  'sw', 'th', 'tr', 'tw', 'wh', 'wr', 'ph', 'qu',
+]);
+
+function isVowel(c: string): boolean {
+  return 'aeiouy'.includes(c);
+}
+
+// Score how natural it would be for an English word to START with this
+// string. We score V starts (e.g. "ization", "ites") and CV starts (e.g.
+// "lift", "tion") and common CC starts (e.g. "stop", "blanket") as fully
+// natural; only awkward consonant clusters ("tl", "ft", "mb") get penalized.
+function scoreStart(s: string): number {
+  if (s.length === 0) return 0;
+  if (s.length === 1) return 2;
+  const c1 = s[0];
+  const c2 = s[1];
+  if (isVowel(c1)) return 2; // V start (still natural, but slightly weaker
+  //                            cue than CV — many English words start with
+  //                            a consonant)
+  if (isVowel(c2)) return 3; // CV start
+  if (COMMON_CONSONANT_CLUSTERS.has(c1 + c2)) return 3; // common CC start
+  return 0; // unnatural CC start (e.g., "tl", "ft", "mb")
+}
+
+// Score how natural it would be for an English word to END at this position.
+// Consonant-final prefixes feel more like complete chunks than vowel-final.
+function scoreEnd(s: string): number {
+  if (s.length < 2) return 0;
+  return isVowel(s[s.length - 1]) ? 1 : 2;
+}
+
+// Score a candidate break position. Higher = better.
+//   startScore × 2 — start quality dominates (a natural-looking second-half
+//                     onset is more important than millimetres of balance).
+//   endScore — small bonus for consonant-final prefixes.
+//   −|p − mid| — penalize positions far from the centre.
+// The factor is intentionally low (×2 not ×10) so a moderately better start
+// doesn't outweigh a much more balanced split.
+function scoreBreakPosition(word: string, p: number): number {
+  const startScore = scoreStart(word.slice(p));
+  const endScore = scoreEnd(word.slice(0, p));
+  const distPenalty = Math.abs(p - word.length / 2);
+  return startScore * 2 + endScore - distPenalty;
+}
+
+function pickBestPosition(word: string, positions: number[]): number {
+  let best = positions[0];
+  let bestScore = scoreBreakPosition(word, best);
+  for (const p of positions) {
+    const score = scoreBreakPosition(word, p);
+    if (score > bestScore) {
+      bestScore = score;
+      best = p;
+    }
+  }
+  return best;
+}
+
+// Refinement search: enumerate positions ±3 around the centre and pick the
+// best by the same scoring function. Used as a fallback when TeX patterns
+// give an unusable result (no breaks at all, or a single short-suffix break
+// on a long stem — i.e. an unrecognized compound word like WEIGHTLIFTING).
+function findSyllableMidpointBreak(word: string): number {
+  const len = word.length;
+  const mid = len / 2;
+  const lo = Math.max(2, Math.floor(mid) - 3);
+  const hi = Math.min(len - 2, Math.ceil(mid) + 3);
+  const candidates: number[] = [];
+  for (let p = lo; p <= hi; p++) candidates.push(p);
+  if (candidates.length === 0) return Math.ceil(mid);
+  return pickBestPosition(word, candidates);
+}
+
 function findBreakPosition(token: string): number {
   const lower = token.toLowerCase();
   const SEP = '­'; // soft hyphen — rare in input, safe to use as marker
@@ -59,7 +145,7 @@ function findBreakPosition(token: string): number {
   try {
     hyphenated = hyphenateSync(lower, { hyphenChar: SEP });
   } catch {
-    return Math.ceil(token.length / 2);
+    return findSyllableMidpointBreak(lower);
   }
   const positions: number[] = [];
   let pos = 0;
@@ -67,16 +153,18 @@ function findBreakPosition(token: string): number {
     if (ch === SEP) positions.push(pos);
     else pos++;
   }
-  if (positions.length === 0) return Math.ceil(token.length / 2);
-  const mid = token.length / 2;
-  let best = positions[0];
-  let bestDist = Math.abs(best - mid);
-  for (const p of positions) {
-    const d = Math.abs(p - mid);
-    if (d < bestDist) {
-      best = p;
-      bestDist = d;
-    }
+  if (positions.length === 0) return findSyllableMidpointBreak(lower);
+
+  const best = pickBestPosition(lower, positions);
+
+  // Suspicious-result refinement: when the only sensible TeX point creates a
+  // very short suffix on a long stem, the dictionary likely missed a compound
+  // boundary (e.g. WEIGHTLIFTING → weightlift-ing). Re-search via the
+  // syllable heuristic, which does find the WEIGHT-LIFTING break.
+  const suffixLen = token.length - best;
+  const prefixLen = best;
+  if (suffixLen <= SHORT_SUFFIX_LEN && prefixLen >= LONG_PREFIX_LEN) {
+    return findSyllableMidpointBreak(lower);
   }
   return best;
 }
