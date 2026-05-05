@@ -384,19 +384,38 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
 }
 
 // Apply letter-spacing tracking so the line consumes any horizontal slack.
-// We spread ls across (charCount - 1) gaps and then switch the line's
-// text-align to start so the first char hugs the left edge and the last char
-// hugs the right edge — the trailing letter-spacing slot pokes past cellW
-// but is clipped by the cell's overflow:hidden, leaving a visually
-// edge-to-edge result. Lines without slack stay centered (default).
-const MAX_TRACKING_EM = 0.6;
-function applyTracking(el: HTMLElement, cellW: number, targetSize: number) {
-  const sw0 = el.scrollWidth;
-  const slack = cellW - sw0;
-  if (slack <= SLACK_PX) return;
+// We spread ls across (charCount - 1) gaps and switch the line's text-align
+// to start so the first char hugs the left edge and the last char hugs the
+// right edge. The trailing letter-spacing slot pokes past cellW but is
+// clipped by the cell's overflow:hidden, leaving a visually edge-to-edge
+// result regardless of how much slack there is. No cap on tracking — short
+// words in wide cells deliberately get large gaps so the first/last
+// characters always sit flush with the cell edges (the poster aesthetic).
+// Lines without slack stay centered (default).
+//
+// IMPORTANT: we measure natural text width via Range, not el.scrollWidth.
+// The line span uses `display: block; width: 100%` for layout, which makes
+// scrollWidth report the parent's width (≈ cellW) regardless of how much
+// shorter the actual text is. Range.getBoundingClientRect() bypasses that
+// and returns the real rendered text width.
+function naturalTextWidth(el: HTMLElement): number {
+  if (typeof document === 'undefined' || !document.createRange) {
+    return el.scrollWidth;
+  }
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const rect = range.getBoundingClientRect();
+  range.detach?.();
+  return rect.width;
+}
+
+function applyTracking(el: HTMLElement, cellW: number, _targetSize: number) {
   const charCount = (el.textContent || '').length;
   if (charCount < 2) return;
-  const ls = clamp(slack / (charCount - 1), 0, MAX_TRACKING_EM * targetSize);
+  const naturalW = naturalTextWidth(el);
+  const slack = cellW - naturalW;
+  if (slack <= SLACK_PX) return;
+  const ls = slack / (charCount - 1);
   el.style.letterSpacing = `${ls}px`;
   el.style.textAlign = 'start';
 }
