@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { CellState, Tier } from '../../types';
 import { Skeleton } from './Skeleton';
 import { useTypeMode } from '../../contexts/TypeMode';
@@ -50,7 +50,28 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
   const display = mode === 'display';
   const clickable = !!onClick && state === 'content';
 
-  const lines = useMemo(() => (content ? splitLines(content) : []), [content]);
+  // Track cell dimensions so splitLines can break long words contextually —
+  // PERIODIZATION stays intact in a wide cell but breaks in a narrow one.
+  const internalCellRef = useRef<HTMLDivElement | null>(null);
+  const [cellSize, setCellSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  const handleCellRef = (el: HTMLDivElement | null) => {
+    internalCellRef.current = el;
+    cellRef?.(el);
+  };
+  useEffect(() => {
+    const el = internalCellRef.current;
+    if (!el) return;
+    const update = () => setCellSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const lines = useMemo(
+    () => (content ? splitLines(content, cellSize.w || undefined, cellSize.h || undefined) : []),
+    [content, cellSize.w, cellSize.h],
+  );
   const linesKey = lines.join('\n');
 
   const fitRef = useFitText<HTMLDivElement>({
@@ -59,9 +80,13 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
     deps: [linesKey, display],
   });
 
+  // Display mode: minimal 2px padding so the first/last char of each line
+  // sits right at the cell edge without crashing into neighbouring cells'
+  // text. Plain mode keeps the wider breathing room.
+  const padding = display ? 'p-0.5' : 'p-2';
   const base =
-    'relative flex items-center justify-center text-center overflow-hidden ' +
-    'transition-colors duration-hover w-full h-full p-2';
+    `relative flex items-center justify-center text-center overflow-hidden ` +
+    `transition-colors duration-hover w-full h-full ${padding}`;
   const hover = clickable ? 'cursor-pointer hover:bg-fill-page' : '';
   const fill = tierFill[tier];
 
@@ -73,7 +98,7 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
 
   return (
     <div
-      ref={cellRef}
+      ref={handleCellRef}
       onClick={clickable ? onClick : undefined}
       className={`${base} ${fill} ${type} ${hover}`.trim()}
     >

@@ -26,29 +26,64 @@ const SLACK_PX = 1; // accept overflow up to 1px to terminate binary search earl
 // Group tokens so every word ≥3 chars gets its own line; words ≤2 chars
 // (e.g. "of", "in", "QR") attach to the next long token, or to the previous
 // line if they trail at the end. Equation-y inputs ("(A - λI)v = 0") collapse
-// onto a single line because all the short fragments glom together. Genuinely
-// extra-long single tokens (>LONG_WORD_THRESHOLD chars) get broken near the
-// middle with a hyphen so they can wrap across multiple lines — most ≤14-char
-// words stay intact and rely on the wdth axis condensing to fit.
-const LONG_WORD_THRESHOLD = 14;
+// onto a single line because all the short fragments glom together.
+//
+// Context-aware breaking: when cell dimensions are provided, a token gets
+// broken into two halves only if doing so would yield a noticeably bigger
+// font-size in this specific cell. We compare two fits:
+//   - keep-intact size = min(target line height, cellW / (kCharWidth × len))
+//   - broken size = min(target line height with one extra line, cellW / (kCharWidth × ceil(len/2)))
+// and break only when broken size beats intact size by ≥15%. That keeps
+// "DETERMINANTS" in 2X2 DETERMINANTS intact (width-bound size 66 vs broken
+// height-bound 61), but breaks "PERIODIZATION" alone in a narrow cell
+// (width-bound 61 vs broken height-bound 91).
+const ABSOLUTE_LONG_THRESHOLD = 16; // always break above this length regardless of cell
+const ABSOLUTE_OK_THRESHOLD = 12; // never break at or below this length — common
+//                                  words like DETERMINANTS (12), EIGENVALUES (11),
+//                                  APPLICATIONS (12) stay intact since the midpoint
+//                                  break ("EIGENV-ALUES") is more disorienting than
+//                                  the smaller font.
+// Approximate per-char width at min wdth (≈25%) in em units, derived from
+// browser measurements of Roboto Flex caps at wMin/gMin.
+const K_CHAR_WIDTH_EM = 0.18;
+const BREAK_BENEFIT_RATIO = 1.15; // broken must be ≥15% bigger to justify the hyphen
 
 function breakLongToken(token: string): string {
-  if (token.length <= LONG_WORD_THRESHOLD) return token;
-  // Break near the middle of the token. Bias the first half slightly larger
-  // so trailing letters (often suffixes like -TION, -MENT) read cleaner.
   const mid = Math.ceil(token.length / 2);
   return token.slice(0, mid) + '-\n' + token.slice(mid);
 }
 
-export function splitLines(text: string): string[] {
-  // Pre-split any extra-long single tokens with a hyphen + newline.
-  const broken = text
+function tokenSize(len: number, cellW: number, cellH: number, lineCount: number): number {
+  return Math.min(cellH / (lineCount * LINE_HEIGHT), cellW / (K_CHAR_WIDTH_EM * len));
+}
+
+function shouldBreak(
+  tokenLength: number,
+  cellW: number | undefined,
+  cellH: number | undefined,
+  lineCount: number,
+): boolean {
+  if (tokenLength <= ABSOLUTE_OK_THRESHOLD) return false;
+  if (tokenLength > ABSOLUTE_LONG_THRESHOLD) return true;
+  if (!cellW || !cellH) return false;
+  const intactSize = tokenSize(tokenLength, cellW, cellH, lineCount);
+  const brokenSize = tokenSize(Math.ceil(tokenLength / 2), cellW, cellH, lineCount + 1);
+  return brokenSize > intactSize * BREAK_BENEFIT_RATIO;
+}
+
+export function splitLines(text: string, cellW?: number, cellH?: number): string[] {
+  const tokens = text
     .trim()
     .split(/\s+/)
-    .filter(Boolean)
-    .map(breakLongToken)
+    .filter(Boolean);
+  // Estimate the line count we'd produce without breaks: each ≥3-char token
+  // gets its own line, short tokens attach to neighbours.
+  const longTokenCount = tokens.filter((t) => t.length > 2).length;
+  const lineCount = Math.max(1, longTokenCount);
+
+  const broken = tokens
+    .map((t) => (shouldBreak(t.length, cellW, cellH, lineCount) ? breakLongToken(t) : t))
     .join(' ');
-  // Now respect any embedded line breaks from the long-word splitter.
   return broken
     .split('\n')
     .flatMap((segment) => groupShortTokens(segment.trim()))
