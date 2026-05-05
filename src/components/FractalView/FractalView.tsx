@@ -240,9 +240,10 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
   );
 }
 
-// Rest template — center column/row is 2fr so the focal block dominates the
-// outer 3×3. Must match REST_TRACKS in Level.tsx.
-const REST = '1fr 2fr 1fr';
+// Rest template — uniform 3×3. The focal cell occupies the full center slot
+// (rendered directly without an inner grid) so it's already 3× larger than a
+// perimeter cell. Must match REST_TRACKS in Level.tsx.
+const REST = '1fr 1fr 1fr';
 
 function cols(slot: number | null): string {
   if (slot == null) return REST;

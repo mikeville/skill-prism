@@ -90,11 +90,9 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
             {lines.map((line, i) => (
               <span
                 key={i}
-                className="block w-full whitespace-nowrap"
+                className="block w-full whitespace-nowrap text-center"
                 style={{
                   lineHeight: LINE_HEIGHT,
-                  textAlign: 'justify',
-                  textAlignLast: 'justify',
                   fontVariationSettings: '"wdth" 100, "wght" 600',
                 }}
               >

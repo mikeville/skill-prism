@@ -36,11 +36,13 @@ type LevelProps = {
 
 const SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
-// At rest, the center column/row is 2fr while the sides are 1fr — so the
-// center 3×3 block reads as the dominant focal area (its containing row+col
-// each take 50% of the grid). When zooming, "1fr 0fr 0fr" / "0fr 1fr 0fr" /
-// "0fr 0fr 1fr" picks one slot to fill; non-focused slots collapse to 0.
-export const REST_TRACKS = '1fr 2fr 1fr';
+// At rest, all three rows/columns are equal — every cell in a perimeter outer
+// block (and every cell in a depth-1 standalone grid) is the same size. The
+// center outer block at depth=2 is rendered as a single focal cell, so it's
+// 3× linearly larger than a perimeter cell while sharing the same outer-grid
+// slot. When zooming, "1fr 0fr 0fr" / "0fr 1fr 0fr" / "0fr 0fr 1fr" picks one
+// slot to fill; non-focused slots collapse to 0.
+export const REST_TRACKS = '1fr 1fr 1fr';
 
 function trackTemplate(focusedIdx: number): string {
   return [0, 1, 2].map((i) => (i === focusedIdx ? '1fr' : '0fr')).join(' ');
@@ -80,20 +82,14 @@ export function Level({
         {SLOTS.map((slot) => {
           const isCenter = slot === 4;
           if (isCenter) {
-            // Center block: topic (primary) at center, secondaries (mains) around it.
-            return (
-              <Level
-                key={slot}
-                node={node}
-                depth={1}
-                tier={tier}
-                loading={loading}
-                onCellClick={onCellClick}
-                registerCell={registerCell}
-                standalone={false}
-                outerBlockSlot={slot}
-              />
-            );
+            // Center block — the focal topic, rendered as a single Cell that
+            // fills the entire center slot of the outer 3×3. The 8 mains used
+            // to surround the focal here too, but they already appear as the
+            // centers of the 8 perimeter blocks; rendering them twice was
+            // redundant. Removing them here lets the focal grow 3× linearly.
+            const term = node.term;
+            const state: CellState = term ? 'content' : loading ? 'loading' : 'empty';
+            return <Cell key={slot} tier="primary" state={state} content={term} />;
           }
           // Surrounding block: a secondary at center, its tertiaries around.
           const childIdx = slot < 4 ? slot : slot - 1;
@@ -117,13 +113,14 @@ export function Level({
     );
   }
 
-  // depth === 1: a 3×3 block. Center cell is 2fr so the focal/main cell of
-  // each block dominates its 3×3. `standalone` mode (mobile single-grid) adds
-  // a subtle 1px frame; otherwise the outer wrapper paints the dividers.
-  // overflow-hidden so collapsing cells clip cleanly during zoom.
+  // depth === 1: a 3×3 block of equal-size cells. Inner hairlines use a much
+  // fainter colour than the outer-block dividers (#e0e0e0) so the secondary
+  // grouping (perimeter outer blocks) reads more quietly than the primary
+  // grouping. `standalone` mode (mobile single-grid) adds the same faint
+  // frame; on desktop the outer wrapper paints dividers around it.
   const wrapperClasses = standalone
-    ? 'grid gap-px w-full h-full bg-[#e0e0e0] border-cell border-[#e0e0e0] box-border overflow-hidden'
-    : 'grid gap-px w-full h-full bg-[#e0e0e0] overflow-hidden';
+    ? 'grid gap-px w-full h-full bg-[#f4f4f4] border-cell border-[#f4f4f4] box-border overflow-hidden'
+    : 'grid gap-px w-full h-full bg-[#f4f4f4] overflow-hidden';
 
   return (
     <div

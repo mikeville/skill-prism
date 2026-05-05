@@ -107,21 +107,31 @@ function searchMax(lo: number, hi: number, probe: (v: number) => boolean, iters 
 //   1. Pick targetSize so the line-box height matches its allotted vertical
 //      share (size = allottedH / LINE_HEIGHT — text is then flush with cell
 //      top + bottom edges).
-//   2. At max wdth + max wght, if width fits, we're done. CSS
-//      `text-align: justify; text-align-last: justify` on the line span
-//      handles any horizontal slack by spreading characters to the edges.
+//   2. At max wdth + max wght, if width fits, apply letter-spacing to push
+//      characters to both horizontal edges. The line span uses
+//      text-align: center, and we set a negative margin-inline-end equal to
+//      the trailing letter-spacing slot so the visible content centers
+//      perfectly while the first/last chars touch the cell edges.
 //   3. If width overflows, reduce wdth → wght → size in that order until fit.
 function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitPreset) {
   const [sMin, sMax] = preset.fontSize;
   const [wMin, wMax] = preset.wdth;
   const [gMin, gMax] = preset.wght;
 
+  // Reset tracking on every run; lines without slack will stay center-aligned
+  // by default (text-align comes from the className) and have no letter-spacing.
+  el.style.letterSpacing = '0';
+  el.style.textAlign = '';
+
   const targetSize = clamp(allottedH / LINE_HEIGHT, sMin, sMax);
   const fitsW = () => el.scrollWidth <= cellW + SLACK_PX;
 
   // Step 1: max wdth/wght at targetSize.
   applyAxes(el, targetSize, wMax, gMax);
-  if (fitsW()) return;
+  if (fitsW()) {
+    applyTracking(el, cellW, targetSize);
+    return;
+  }
 
   // Step 2: width overflows at max wdth/wght. Reduce wdth.
   const wdth = searchMax(wMin, wMax, (w) => {
@@ -129,7 +139,10 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
     return fitsW();
   });
   applyAxes(el, targetSize, wdth, gMax);
-  if (fitsW()) return;
+  if (fitsW()) {
+    applyTracking(el, cellW, targetSize);
+    return;
+  }
 
   // Step 3: still overflowing. Reduce wght.
   const wght = searchMax(gMin, gMax, (g) => {
@@ -137,7 +150,10 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
     return fitsW();
   });
   applyAxes(el, targetSize, wMin, wght);
-  if (fitsW()) return;
+  if (fitsW()) {
+    applyTracking(el, cellW, targetSize);
+    return;
+  }
 
   // Step 4: even at wMin/gMin we overflow. Shrink size below targetSize. The
   // line will under-fill vertically but at least won't get clipped horizontally.
@@ -146,6 +162,25 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
     return fitsW();
   });
   applyAxes(el, newSize, wMin, gMin);
+  // Don't track at this point — the line is already constrained by min axes.
+}
+
+// Apply letter-spacing tracking so the line consumes any horizontal slack.
+// We spread ls across (charCount - 1) gaps and then switch the line's
+// text-align to start so the first char hugs the left edge and the last char
+// hugs the right edge — the trailing letter-spacing slot pokes past cellW
+// but is clipped by the cell's overflow:hidden, leaving a visually
+// edge-to-edge result. Lines without slack stay centered (default).
+const MAX_TRACKING_EM = 0.6;
+function applyTracking(el: HTMLElement, cellW: number, targetSize: number) {
+  const sw0 = el.scrollWidth;
+  const slack = cellW - sw0;
+  if (slack <= SLACK_PX) return;
+  const charCount = (el.textContent || '').length;
+  if (charCount < 2) return;
+  const ls = clamp(slack / (charCount - 1), 0, MAX_TRACKING_EM * targetSize);
+  el.style.letterSpacing = `${ls}px`;
+  el.style.textAlign = 'start';
 }
 
 export function fitMultiline(container: HTMLElement, tier: FitTier) {
@@ -173,5 +208,7 @@ export function clearFit(container: HTMLElement) {
   for (const line of lines) {
     line.style.fontSize = '';
     line.style.fontVariationSettings = '';
+    line.style.letterSpacing = '';
+    line.style.textAlign = '';
   }
 }
