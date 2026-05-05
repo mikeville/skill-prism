@@ -240,14 +240,18 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
   );
 }
 
+// Rest template — center column/row is 2fr so the focal block dominates the
+// outer 3×3. Must match REST_TRACKS in Level.tsx.
+const REST = '1fr 2fr 1fr';
+
 function cols(slot: number | null): string {
-  if (slot == null) return '1fr 1fr 1fr';
+  if (slot == null) return REST;
   const c = slot % 3;
   return [0, 1, 2].map((i) => (i === c ? '1fr' : '0fr')).join(' ');
 }
 
 function rows(slot: number | null): string {
-  if (slot == null) return '1fr 1fr 1fr';
+  if (slot == null) return REST;
   const r = Math.floor(slot / 3);
   return [0, 1, 2].map((i) => (i === r ? '1fr' : '0fr')).join(' ');
 }

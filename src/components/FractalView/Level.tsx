@@ -36,7 +36,12 @@ type LevelProps = {
 
 const SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
-// "1fr 0fr 0fr", "0fr 1fr 0fr", or "0fr 0fr 1fr" — picks one column/row at 1fr, others at 0fr.
+// At rest, the center column/row is 2fr while the sides are 1fr — so the
+// center 3×3 block reads as the dominant focal area (its containing row+col
+// each take 50% of the grid). When zooming, "1fr 0fr 0fr" / "0fr 1fr 0fr" /
+// "0fr 0fr 1fr" picks one slot to fill; non-focused slots collapse to 0.
+export const REST_TRACKS = '1fr 2fr 1fr';
+
 function trackTemplate(focusedIdx: number): string {
   return [0, 1, 2].map((i) => (i === focusedIdx ? '1fr' : '0fr')).join(' ');
 }
@@ -55,19 +60,21 @@ export function Level({
   outerBlockSlot,
 }: LevelProps) {
   if (depth === 2) {
-    // Outer 3x3. The 2px gap + 2px padding on bg-ink paints the dark group dividers and outer frame.
-    // focusSlot collapses non-focused rows/columns to 0fr — used by FractalView's zoom animation.
+    // Outer 3x3. The 1px gap + 1px padding on bg-divider paints subtle group
+    // dividers + outer frame. focusSlot collapses non-focused rows/cols to
+    // 0fr — used by FractalView's zoom animation. At rest the center is 2fr
+    // so the focal block dominates the layout.
     const gridStyle: React.CSSProperties =
       focusSlot != null
         ? {
             gridTemplateColumns: trackTemplate(focusSlot % 3),
             gridTemplateRows: trackTemplate(Math.floor(focusSlot / 3)),
           }
-        : {};
+        : { gridTemplateColumns: REST_TRACKS, gridTemplateRows: REST_TRACKS };
     return (
       <div
         ref={gridRef}
-        className="grid grid-cols-3 grid-rows-3 gap-[2px] p-[2px] w-full h-full bg-ink overflow-hidden"
+        className="grid gap-px p-px w-full h-full bg-[#e0e0e0] overflow-hidden"
         style={gridStyle}
       >
         {SLOTS.map((slot) => {
@@ -110,15 +117,19 @@ export function Level({
     );
   }
 
-  // depth === 1: a 3x3 block. The bg-line + gap-px paint the internal 1px hairlines.
-  // standalone=true adds its own 2px ink frame; standalone=false relies on the outer wrapper.
-  // overflow-hidden so collapsing cells (when an outer block is at 0fr during a zoom) clip cleanly.
+  // depth === 1: a 3×3 block. Center cell is 2fr so the focal/main cell of
+  // each block dominates its 3×3. `standalone` mode (mobile single-grid) adds
+  // a subtle 1px frame; otherwise the outer wrapper paints the dividers.
+  // overflow-hidden so collapsing cells clip cleanly during zoom.
   const wrapperClasses = standalone
-    ? 'grid grid-cols-3 grid-rows-3 gap-px w-full h-full bg-line border-block border-ink box-border overflow-hidden'
-    : 'grid grid-cols-3 grid-rows-3 gap-px w-full h-full bg-line overflow-hidden';
+    ? 'grid gap-px w-full h-full bg-[#e0e0e0] border-cell border-[#e0e0e0] box-border overflow-hidden'
+    : 'grid gap-px w-full h-full bg-[#e0e0e0] overflow-hidden';
 
   return (
-    <div className={wrapperClasses}>
+    <div
+      className={wrapperClasses}
+      style={{ gridTemplateColumns: REST_TRACKS, gridTemplateRows: REST_TRACKS }}
+    >
       {SLOTS.map((slot) => {
         const isCenter = slot === 4;
 

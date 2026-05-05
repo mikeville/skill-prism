@@ -22,14 +22,41 @@ export const PRESETS: Record<FitTier, FitPreset> = {
 export const LINE_HEIGHT = 0.78;
 
 const SLACK_PX = 1; // accept overflow up to 1px to terminate binary search early
-const MAX_TRACKING_EM = 0.6; // cap letter-spacing at 0.6em — beyond this it reads as separated
 
 // Group tokens so every word ≥3 chars gets its own line; words ≤2 chars
 // (e.g. "of", "in", "QR") attach to the next long token, or to the previous
 // line if they trail at the end. Equation-y inputs ("(A - λI)v = 0") collapse
-// onto a single line because all the short fragments glom together.
+// onto a single line because all the short fragments glom together. Genuinely
+// extra-long single tokens (>LONG_WORD_THRESHOLD chars) get broken near the
+// middle with a hyphen so they can wrap across multiple lines — most ≤14-char
+// words stay intact and rely on the wdth axis condensing to fit.
+const LONG_WORD_THRESHOLD = 14;
+
+function breakLongToken(token: string): string {
+  if (token.length <= LONG_WORD_THRESHOLD) return token;
+  // Break near the middle of the token. Bias the first half slightly larger
+  // so trailing letters (often suffixes like -TION, -MENT) read cleaner.
+  const mid = Math.ceil(token.length / 2);
+  return token.slice(0, mid) + '-\n' + token.slice(mid);
+}
+
 export function splitLines(text: string): string[] {
-  const tokens = text.trim().split(/\s+/).filter(Boolean);
+  // Pre-split any extra-long single tokens with a hyphen + newline.
+  const broken = text
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(breakLongToken)
+    .join(' ');
+  // Now respect any embedded line breaks from the long-word splitter.
+  return broken
+    .split('\n')
+    .flatMap((segment) => groupShortTokens(segment.trim()))
+    .filter(Boolean);
+}
+
+function groupShortTokens(text: string): string[] {
+  const tokens = text.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return [];
   const lines: string[] = [];
   let buf: string[] = [];
@@ -80,41 +107,21 @@ function searchMax(lo: number, hi: number, probe: (v: number) => boolean, iters 
 //   1. Pick targetSize so the line-box height matches its allotted vertical
 //      share (size = allottedH / LINE_HEIGHT — text is then flush with cell
 //      top + bottom edges).
-//   2. At max wdth + max wght, measure width.
-//      a. If width fits and there's slack, expand letter-spacing (tracking)
-//         until the line is flush with both horizontal edges.
-//      b. If width overflows, drop tracking and reduce wdth → wght → size in
-//         that order until it fits.
+//   2. At max wdth + max wght, if width fits, we're done. CSS
+//      `text-align: justify; text-align-last: justify` on the line span
+//      handles any horizontal slack by spreading characters to the edges.
+//   3. If width overflows, reduce wdth → wght → size in that order until fit.
 function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitPreset) {
   const [sMin, sMax] = preset.fontSize;
   const [wMin, wMax] = preset.wdth;
   const [gMin, gMax] = preset.wght;
 
-  el.style.letterSpacing = '0';
   const targetSize = clamp(allottedH / LINE_HEIGHT, sMin, sMax);
   const fitsW = () => el.scrollWidth <= cellW + SLACK_PX;
-  const charCount = (el.textContent || '').length;
 
   // Step 1: max wdth/wght at targetSize.
   applyAxes(el, targetSize, wMax, gMax);
-  if (fitsW()) {
-    // Width has slack — push letter-spacing to consume it.
-    const slack = cellW - el.scrollWidth;
-    if (slack > SLACK_PX && charCount > 1) {
-      // Letter-spacing applies once per character (including a trailing one in
-      // most browsers), so divide slack by charCount, not (charCount - 1).
-      const lsCap = MAX_TRACKING_EM * targetSize;
-      const ls = clamp(slack / charCount, 0, lsCap);
-      el.style.letterSpacing = `${ls}px`;
-      // Verify; back off proportionally if we overshot the cell edge.
-      if (el.scrollWidth > cellW + SLACK_PX) {
-        const overshoot = el.scrollWidth - cellW;
-        const adjusted = Math.max(0, ls - overshoot / charCount);
-        el.style.letterSpacing = `${adjusted}px`;
-      }
-    }
-    return;
-  }
+  if (fitsW()) return;
 
   // Step 2: width overflows at max wdth/wght. Reduce wdth.
   const wdth = searchMax(wMin, wMax, (w) => {
@@ -124,7 +131,7 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
   applyAxes(el, targetSize, wdth, gMax);
   if (fitsW()) return;
 
-  // Step 3: still overflowing. Reduce wght at sMin equivalent (targetSize/wMin).
+  // Step 3: still overflowing. Reduce wght.
   const wght = searchMax(gMin, gMax, (g) => {
     applyAxes(el, targetSize, wMin, g);
     return fitsW();
@@ -166,6 +173,5 @@ export function clearFit(container: HTMLElement) {
   for (const line of lines) {
     line.style.fontSize = '';
     line.style.fontVariationSettings = '';
-    line.style.letterSpacing = '';
   }
 }

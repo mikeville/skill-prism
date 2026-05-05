@@ -9,9 +9,9 @@ module.exports = {
       'fill-tertiary': '#f7f7f7',
       'fill-page': '#f2f2f2',
       ink: '#111111',
-      'ink-mut': '#a2a2a2',
+      'ink-mut': '#c8c8c8',
       'ink-faint': 'rgba(17,17,17,0.18)',
-      line: '#dadada',
+      line: '#ffffff',
     },
     fontFamily: {
       sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],

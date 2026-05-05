@@ -16,10 +16,12 @@ type CellProps = {
   compact?: boolean;
 };
 
+// All tiers share the same paper fill — visual hierarchy is now carried
+// entirely by type weight/width/size and the ink/ink-mut color split.
 const tierFill: Record<Tier, string> = {
   primary: 'bg-paper',
-  secondary: 'bg-fill-secondary',
-  tertiary: 'bg-fill-tertiary',
+  secondary: 'bg-paper',
+  tertiary: 'bg-paper',
 };
 
 const tierTypePlain: Record<Tier, string> = {
@@ -83,14 +85,16 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
         display ? (
           <div
             ref={fitRef}
-            className="flex flex-col items-center justify-center w-full h-full uppercase"
+            className="flex flex-col items-stretch justify-center w-full h-full uppercase"
           >
             {lines.map((line, i) => (
               <span
                 key={i}
-                className="block whitespace-nowrap"
+                className="block w-full whitespace-nowrap"
                 style={{
                   lineHeight: LINE_HEIGHT,
+                  textAlign: 'justify',
+                  textAlignLast: 'justify',
                   fontVariationSettings: '"wdth" 100, "wght" 600',
                 }}
               >
