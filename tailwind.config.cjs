@@ -15,6 +15,7 @@ module.exports = {
     },
     fontFamily: {
       sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+      mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
     },
     fontSize: {
       meta: ['12px', { lineHeight: '1.4' }],

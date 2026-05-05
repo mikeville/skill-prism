@@ -7,8 +7,8 @@ export type FractalNode = {
 };
 
 export type CellClick =
-  | { kind: 'secondary'; mainIdx: number }
-  | { kind: 'tertiary'; mainIdx: number; subIdx: number };
+  | { kind: 'secondary'; mainIdx: number; originBlockSlot?: number }
+  | { kind: 'tertiary'; mainIdx: number; subIdx: number; originBlockSlot?: number };
 
 export type CellRefKey = { mainIdx: number; subIdx?: number };
 
@@ -23,9 +23,23 @@ type LevelProps = {
   // standalone=true → this depth=1 grid renders its own dark frame (mobile single-grid).
   // standalone=false → it sits inside a depth=2 outer wrapper that already paints the dark gaps + frame.
   standalone?: boolean;
+  // For zoom animations on depth=2: when set, the outer 3x3 collapses to focus on this slot
+  // (only its row/column at 1fr; the others at 0fr so the focused block fills the wrapper).
+  focusSlot?: number | null;
+  // Ref to the outer 3x3 grid div (depth=2 only) so FractalView can animate grid-template-* on it.
+  gridRef?: React.RefObject<HTMLDivElement>;
+  // Slot 0..8 of the outer 3x3 that this depth=1 Level lives inside (set by the depth=2 parent
+  // during recursion). Threads through into CellClick events so FractalView knows which 3x3
+  // block to zoom into without doing a fragile DOM lookup.
+  outerBlockSlot?: number;
 };
 
 const SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+
+// "1fr 0fr 0fr", "0fr 1fr 0fr", or "0fr 0fr 1fr" — picks one column/row at 1fr, others at 0fr.
+function trackTemplate(focusedIdx: number): string {
+  return [0, 1, 2].map((i) => (i === focusedIdx ? '1fr' : '0fr')).join(' ');
+}
 
 export function Level({
   node,
@@ -36,11 +50,26 @@ export function Level({
   registerCell,
   trail,
   standalone = true,
+  focusSlot,
+  gridRef,
+  outerBlockSlot,
 }: LevelProps) {
   if (depth === 2) {
     // Outer 3x3. The 2px gap + 2px padding on bg-ink paints the dark group dividers and outer frame.
+    // focusSlot collapses non-focused rows/columns to 0fr — used by FractalView's zoom animation.
+    const gridStyle: React.CSSProperties =
+      focusSlot != null
+        ? {
+            gridTemplateColumns: trackTemplate(focusSlot % 3),
+            gridTemplateRows: trackTemplate(Math.floor(focusSlot / 3)),
+          }
+        : {};
     return (
-      <div className="grid grid-cols-3 grid-rows-3 gap-[2px] p-[2px] w-full h-full bg-ink">
+      <div
+        ref={gridRef}
+        className="grid grid-cols-3 grid-rows-3 gap-[2px] p-[2px] w-full h-full bg-ink overflow-hidden"
+        style={gridStyle}
+      >
         {SLOTS.map((slot) => {
           const isCenter = slot === 4;
           if (isCenter) {
@@ -55,6 +84,7 @@ export function Level({
                 onCellClick={onCellClick}
                 registerCell={registerCell}
                 standalone={false}
+                outerBlockSlot={slot}
               />
             );
           }
@@ -72,6 +102,7 @@ export function Level({
               registerCell={registerCell}
               trail={{ mainIdx: childIdx }}
               standalone={false}
+              outerBlockSlot={slot}
             />
           );
         })}
@@ -81,9 +112,10 @@ export function Level({
 
   // depth === 1: a 3x3 block. The bg-line + gap-px paint the internal 1px hairlines.
   // standalone=true adds its own 2px ink frame; standalone=false relies on the outer wrapper.
+  // overflow-hidden so collapsing cells (when an outer block is at 0fr during a zoom) clip cleanly.
   const wrapperClasses = standalone
-    ? 'grid grid-cols-3 grid-rows-3 gap-px w-full h-full bg-line border-block border-ink box-border'
-    : 'grid grid-cols-3 grid-rows-3 gap-px w-full h-full bg-line';
+    ? 'grid grid-cols-3 grid-rows-3 gap-px w-full h-full bg-line border-block border-ink box-border overflow-hidden'
+    : 'grid grid-cols-3 grid-rows-3 gap-px w-full h-full bg-line overflow-hidden';
 
   return (
     <div className={wrapperClasses}>
@@ -98,7 +130,12 @@ export function Level({
             // Center of an outer block — this is one of the 8 secondaries; make it clickable.
             const click =
               state === 'content'
-                ? () => onCellClick({ kind: 'secondary', mainIdx: trail.mainIdx })
+                ? () =>
+                    onCellClick({
+                      kind: 'secondary',
+                      mainIdx: trail.mainIdx,
+                      originBlockSlot: outerBlockSlot,
+                    })
                 : undefined;
             return (
               <Cell
@@ -131,8 +168,19 @@ export function Level({
 
         const click =
           trail != null
-            ? () => onCellClick({ kind: 'tertiary', mainIdx: trail.mainIdx, subIdx: childIdx })
-            : () => onCellClick({ kind: 'secondary', mainIdx: childIdx });
+            ? () =>
+                onCellClick({
+                  kind: 'tertiary',
+                  mainIdx: trail.mainIdx,
+                  subIdx: childIdx,
+                  originBlockSlot: outerBlockSlot,
+                })
+            : () =>
+                onCellClick({
+                  kind: 'secondary',
+                  mainIdx: childIdx,
+                  originBlockSlot: outerBlockSlot,
+                });
 
         return (
           <Cell
