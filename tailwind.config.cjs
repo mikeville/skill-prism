@@ -15,6 +15,7 @@ module.exports = {
     },
     fontFamily: {
       sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+      display: ['"Roboto Flex Variable"', 'Inter', 'system-ui', 'sans-serif'],
       mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
     },
     fontSize: {

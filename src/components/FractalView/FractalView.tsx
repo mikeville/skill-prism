@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DataState } from '../../types';
+import { AnimatingProvider } from '../../contexts/Animating';
 import { Level, type CellClick, type FractalNode } from './Level';
 
 // ZoomIntent is set by App (via FractalView's click handler for zoom-in, or directly for
@@ -37,6 +38,29 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
   const oldLayerRef = useRef<HTMLDivElement>(null);
   const newGridRef = useRef<HTMLDivElement>(null);
   const oldGridRef = useRef<HTMLDivElement>(null);
+
+  // Animation flag for useFitText: true while a zoom is in flight so cells
+  // skip re-fitting during the 360ms transition. Held in a ref + listeners
+  // so flipping it doesn't re-render the whole tree.
+  const animatingRef = useRef(false);
+  const animatingListenersRef = useRef<Set<(v: boolean) => void>>(new Set());
+  const animatingCtx = useMemo(
+    () => ({
+      isAnimating: () => animatingRef.current,
+      onChange: (cb: (v: boolean) => void) => {
+        animatingListenersRef.current.add(cb);
+        return () => {
+          animatingListenersRef.current.delete(cb);
+        };
+      },
+    }),
+    [],
+  );
+  const setAnimating = (v: boolean) => {
+    if (animatingRef.current === v) return;
+    animatingRef.current = v;
+    animatingListenersRef.current.forEach((cb) => cb(v));
+  };
 
   const newTree = useMemo<FractalNode>(() => buildTree(data), [data]);
   const newLoading = data?.loading ?? false;
@@ -151,6 +175,8 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
       { duration: ANIM_MS, fill: 'forwards' },
     );
 
+    setAnimating(true);
+
     let cancelled = false;
     const finish = () => {
       if (cancelled) return;
@@ -160,6 +186,7 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
       oldOpacityAnim.cancel();
       newOpacityAnim.cancel();
       newLayer.style.opacity = '';
+      setAnimating(false);
       setOldSnap(null);
     };
 
@@ -175,38 +202,41 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
       newGridAnim.cancel();
       oldOpacityAnim.cancel();
       newOpacityAnim.cancel();
+      setAnimating(false);
     };
   }, [oldSnap]);
 
   return (
-    <div className="relative w-full h-full p-8 border-cell border-line box-border">
-      <div ref={wrapperRef} className="relative w-full h-full">
-        {oldSnap && (
-          <div ref={oldLayerRef} className="absolute inset-0 pointer-events-none">
+    <AnimatingProvider value={animatingCtx}>
+      <div className="relative w-full h-full p-8 border-cell border-line box-border">
+        <div ref={wrapperRef} className="relative w-full h-full">
+          {oldSnap && (
+            <div ref={oldLayerRef} className="absolute inset-0 pointer-events-none">
+              <Level
+                node={oldSnap.tree}
+                depth={oldSnap.depth}
+                tier="primary"
+                loading={oldSnap.loading}
+                onCellClick={() => {}}
+                focusSlot={oldSnap.oldZoom.from}
+                gridRef={oldGridRef}
+              />
+            </div>
+          )}
+          <div ref={newLayerRef} className="absolute inset-0">
             <Level
-              node={oldSnap.tree}
-              depth={oldSnap.depth}
+              node={newTree}
+              depth={depth}
               tier="primary"
-              loading={oldSnap.loading}
-              onCellClick={() => {}}
-              focusSlot={oldSnap.oldZoom.from}
-              gridRef={oldGridRef}
+              loading={newLoading}
+              onCellClick={handleCellClick}
+              focusSlot={oldSnap?.newZoom.from ?? null}
+              gridRef={newGridRef}
             />
           </div>
-        )}
-        <div ref={newLayerRef} className="absolute inset-0">
-          <Level
-            node={newTree}
-            depth={depth}
-            tier="primary"
-            loading={newLoading}
-            onCellClick={handleCellClick}
-            focusSlot={oldSnap?.newZoom.from ?? null}
-            gridRef={newGridRef}
-          />
         </div>
       </div>
-    </div>
+    </AnimatingProvider>
   );
 }
 

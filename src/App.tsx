@@ -5,6 +5,7 @@ import type { CellClick } from './components/FractalView/Level';
 import type { ZoomIntent } from './components/FractalView/FractalView';
 import { SkillSidebar } from './components/SkillSidebar/SkillSidebar';
 import { Topbar } from './components/Topbar/Topbar';
+import { TypeModeProvider } from './contexts/TypeMode';
 import { useBreakdown } from './hooks/useBreakdown';
 import { useContainerDepth } from './hooks/useContainerDepth';
 import { usePath } from './hooks/usePath';
@@ -12,6 +13,14 @@ import { cacheGet } from './lib/cache';
 import { buildSkillMarkdown } from './lib/exportSkill';
 
 export default function App() {
+  return (
+    <TypeModeProvider>
+      <AppInner />
+    </TypeModeProvider>
+  );
+}
+
+function AppInner() {
   const [path, setPath] = usePath();
   const { data, regenerating, error } = useBreakdown(path);
   const { ref: gridContainerRef, depth } = useContainerDepth();

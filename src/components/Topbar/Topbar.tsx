@@ -1,3 +1,4 @@
+import { useTypeMode } from '../../contexts/TypeMode';
 import { Breadcrumb } from './Breadcrumb';
 
 type Props = {
@@ -19,6 +20,8 @@ export function Topbar({
   skillOpen,
   onToggleSkill,
 }: Props) {
+  const { mode, toggle } = useTypeMode();
+  const display = mode === 'display';
   return (
     <div className="flex items-center gap-6 px-8 h-[62px] bg-fill-page border-b border-line shrink-0">
       <button
@@ -29,13 +32,31 @@ export function Topbar({
         Ohtani
       </button>
       <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />
+      <button
+        type="button"
+        onClick={toggle}
+        aria-pressed={display}
+        title={display ? 'Switch to plain typography' : 'Switch to display typography'}
+        className={[
+          'ml-auto text-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
+          'leading-none px-2 py-0.5 border-cell',
+          display ? 'border-ink' : 'border-line',
+        ].join(' ')}
+        style={
+          display
+            ? { fontFamily: '"Roboto Flex Variable", Inter, sans-serif', fontVariationSettings: '"wdth" 151, "wght" 900' }
+            : undefined
+        }
+      >
+        Aa
+      </button>
       {canOpenSkill && (
         <button
           type="button"
           onClick={onToggleSkill}
           aria-pressed={skillOpen}
           className={[
-            'ml-auto text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
+            'text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
             skillOpen ? 'border-cell border-line px-2 py-0.5' : '',
           ].join(' ')}
         >
