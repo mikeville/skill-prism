@@ -15,6 +15,8 @@ module.exports = {
     },
     fontFamily: {
       sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+      // Display family — keep in sync with src/lib/fontConfig.ts FONT_CONFIG.family.
+      // Duplicated here because CommonJS Tailwind config can't import TS modules.
       display: ['"Roboto Flex Variable"', 'Inter', 'system-ui', 'sans-serif'],
       mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
     },

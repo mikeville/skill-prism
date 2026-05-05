@@ -1,4 +1,5 @@
 import { useTypeMode } from '../../contexts/TypeMode';
+import { FONT_CONFIG } from '../../lib/fontConfig';
 import { Breadcrumb } from './Breadcrumb';
 
 type Props = {
@@ -44,7 +45,10 @@ export function Topbar({
         ].join(' ')}
         style={
           display
-            ? { fontFamily: '"Roboto Flex Variable", Inter, sans-serif', fontVariationSettings: '"wdth" 151, "wght" 900' }
+            ? {
+                fontFamily: FONT_CONFIG.family,
+                fontVariationSettings: `"wdth" ${FONT_CONFIG.aaPreview.wdth}, "wght" ${FONT_CONFIG.aaPreview.wght}`,
+              }
             : undefined
         }
       >

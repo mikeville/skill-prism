@@ -4,6 +4,7 @@ import { Skeleton } from './Skeleton';
 import { useTypeMode } from '../../contexts/TypeMode';
 import { useFitText } from '../../hooks/useFitText';
 import { splitLines, LINE_HEIGHT, type FitTier } from '../../lib/fitText';
+import { FONT_CONFIG } from '../../lib/fontConfig';
 
 type CellProps = {
   tier: Tier;
@@ -118,7 +119,7 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
                 className="block w-full whitespace-nowrap text-center"
                 style={{
                   lineHeight: LINE_HEIGHT,
-                  fontVariationSettings: '"wdth" 100, "wght" 600',
+                  fontVariationSettings: `"wdth" ${FONT_CONFIG.cellStaticDisplay.wdth}, "wght" ${FONT_CONFIG.cellStaticDisplay.wght}`,
                 }}
               >
                 {line}

@@ -1,7 +1,8 @@
 import { hyphenateSync } from 'hyphen/en';
+import { FONT_CONFIG } from './fontConfig';
 
-// Per-tier presets for the multi-line fit. Roboto Flex axis ranges:
-// wght 100-1000, wdth 25-151, opsz 8-144. We stay inside those.
+// Per-tier presets for the multi-line fit. Axis ranges come from FONT_CONFIG
+// so swapping typefaces is a one-line change in fontConfig.ts.
 export type FitTier = 'primary' | 'secondary' | 'tertiary';
 
 export type FitPreset = {
@@ -10,18 +11,31 @@ export type FitPreset = {
   wght: [min: number, max: number];
 };
 
-export const PRESETS: Record<FitTier, FitPreset> = {
-  primary: { fontSize: [8, 320], wdth: [25, 151], wght: [200, 1000] },
-  secondary: { fontSize: [8, 240], wdth: [25, 151], wght: [200, 1000] },
-  tertiary: { fontSize: [8, 160], wdth: [25, 151], wght: [200, 1000] },
+// fontSize upper bounds are tier-specific (presentation concern); the lower
+// bound tracks the font's opsz minimum so we never request a size below what
+// the font is hinted for. wdth/wght bounds come straight from the config.
+const SIZE_MAX_BY_TIER: Record<FitTier, number> = {
+  primary: 320,
+  secondary: 240,
+  tertiary: 160,
 };
 
-// Line-box-to-fontSize ratio for our caps-only display. Roboto Flex's cap
-// height is roughly 0.72em; leading is set to this value via inline style on
-// each line span so the line-box is exactly cap-height tall (text flush with
-// line-box top/bottom). fontSize is then set to allottedHeight / LINE_HEIGHT
-// so that numLines × lineBox === cellHeight, fully consuming vertical space.
-export const LINE_HEIGHT = 0.78;
+function buildPresets(cfg: typeof FONT_CONFIG): Record<FitTier, FitPreset> {
+  const sMin = cfg.axes.opsz[0];
+  return {
+    primary: { fontSize: [sMin, SIZE_MAX_BY_TIER.primary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
+    secondary: { fontSize: [sMin, SIZE_MAX_BY_TIER.secondary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
+    tertiary: { fontSize: [sMin, SIZE_MAX_BY_TIER.tertiary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
+  };
+}
+
+export const PRESETS: Record<FitTier, FitPreset> = buildPresets(FONT_CONFIG);
+
+// Line-box-to-fontSize ratio for our caps-only display. Roughly matches the
+// font's cap height so leading produces line-boxes exactly cap-height tall
+// (text flush with line-box top/bottom). fontSize is then set to
+// allottedHeight / LINE_HEIGHT so numLines × lineBox === cellHeight.
+export const LINE_HEIGHT = FONT_CONFIG.lineHeight;
 
 const SLACK_PX = 1; // accept overflow up to 1px to terminate binary search early
 
@@ -184,7 +198,7 @@ function getMeasureEl(): HTMLSpanElement | null {
     measureEl.style.position = 'absolute';
     measureEl.style.left = '-9999px';
     measureEl.style.top = '-9999px';
-    measureEl.style.fontFamily = '"Roboto Flex Variable", Inter, sans-serif';
+    measureEl.style.fontFamily = FONT_CONFIG.family;
     measureEl.style.whiteSpace = 'nowrap';
     measureEl.style.lineHeight = '1';
     measureEl.style.textTransform = 'uppercase';
@@ -231,7 +245,9 @@ function shouldBreak(
   if (!cellW || !cellH) return false;
 
   // Intact prediction: width-bound at min wdth/wght, capped by per-line height.
-  const intactWidthBound = predictMaxSize(token, cellW, 25, 200);
+  const wMin = FONT_CONFIG.axes.wdth[0];
+  const gMin = FONT_CONFIG.axes.wght[0];
+  const intactWidthBound = predictMaxSize(token, cellW, wMin, gMin);
   const intactHeightBound = cellH / (lineCount * LINE_HEIGHT);
   const intactSize = Math.min(intactWidthBound, intactHeightBound);
   const intactFill = fillRatio(intactSize, lineCount, cellH);
@@ -242,7 +258,7 @@ function shouldBreak(
   const left = token.slice(0, pos);
   const right = token.slice(pos);
   const longer = left.length >= right.length ? `${left}-` : right;
-  const brokenWidthBound = predictMaxSize(longer, cellW, 25, 200);
+  const brokenWidthBound = predictMaxSize(longer, cellW, wMin, gMin);
   const brokenHeightBound = cellH / ((lineCount + 1) * LINE_HEIGHT);
   const brokenSize = Math.min(brokenWidthBound, brokenHeightBound);
   const brokenFill = fillRatio(brokenSize, lineCount + 1, cellH);
