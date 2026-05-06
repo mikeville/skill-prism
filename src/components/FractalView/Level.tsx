@@ -76,7 +76,7 @@ export function Level({
     return (
       <div
         ref={gridRef}
-        className="grid gap-px p-px w-full h-full bg-[#e0e0e0] overflow-hidden"
+        className="grid gap-px p-px w-full h-full bg-[#5d5d5d] overflow-hidden"
         style={gridStyle}
       >
         {SLOTS.map((slot) => {

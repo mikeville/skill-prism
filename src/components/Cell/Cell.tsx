@@ -83,10 +83,11 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
     deps: [linesKey, display, typefaceKey],
   });
 
-  // Display mode: minimal 2px padding so the first/last char of each line
-  // sits right at the cell edge without crashing into neighbouring cells'
-  // text. Plain mode keeps the wider breathing room.
-  const padding = display ? 'p-0.5' : 'p-2';
+  // 1rem padding (≈16px) inside every cell. The fit algorithm reads container
+  // padding via getComputedStyle, so display-mode text still sizes to fill the
+  // inner area; tracking pushes the first/last char flush with the inner edge
+  // rather than the cell border.
+  const padding = 'p-4';
   const base =
     `relative flex items-center justify-center text-center overflow-hidden ` +
     `transition-colors duration-hover w-full h-full ${padding}`;
