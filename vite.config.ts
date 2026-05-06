@@ -11,5 +11,10 @@ export default defineConfig({
   plugins: [react(), apiCompleteProxy(), tailwindConfigHmr()],
   server: {
     port: 5173,
+    watch: {
+      // Ignore sibling git worktrees under .claude/worktrees/ — their own
+      // tsconfig/source edits would otherwise trigger spurious reloads here.
+      ignored: ['**/.claude/worktrees/**'],
+    },
   },
 });
