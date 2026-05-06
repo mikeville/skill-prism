@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
-export type TypeMode = 'display' | 'plain';
+export type TypeMode = 'poster' | 'plain';
 
 type Ctx = {
   mode: TypeMode;
@@ -12,9 +12,9 @@ const TypeModeContext = createContext<Ctx | null>(null);
 const STORAGE_KEY = 'ohtani.typeMode';
 
 function readInitial(): TypeMode {
-  if (typeof window === 'undefined') return 'display';
+  if (typeof window === 'undefined') return 'poster';
   const v = window.localStorage.getItem(STORAGE_KEY);
-  return v === 'plain' ? 'plain' : 'display';
+  return v === 'plain' ? 'plain' : 'poster';
 }
 
 export function TypeModeProvider({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ export function TypeModeProvider({ children }: { children: ReactNode }) {
   }, [mode]);
 
   const toggle = useCallback(() => {
-    setMode((m) => (m === 'display' ? 'plain' : 'display'));
+    setMode((m) => (m === 'poster' ? 'plain' : 'poster'));
   }, []);
 
   return <TypeModeContext.Provider value={{ mode, toggle }}>{children}</TypeModeContext.Provider>;

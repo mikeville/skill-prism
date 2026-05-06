@@ -22,7 +22,7 @@ export function Topbar({
   onToggleSkill,
 }: Props) {
   const { mode, toggle } = useTypeMode();
-  const display = mode === 'display';
+  const poster = mode === 'poster';
 
   return (
     <div className="flex items-center gap-6 px-8 h-[62px] bg-fill-page border-b border-line shrink-0">
@@ -38,15 +38,15 @@ export function Topbar({
         <button
           type="button"
           onClick={toggle}
-          aria-pressed={display}
-          title={display ? 'Switch to plain typography' : 'Switch to display typography'}
+          aria-pressed={poster}
+          title={poster ? 'Switch to plain typography' : 'Switch to poster typography'}
           className={[
             'text-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
             'leading-none px-2 py-0.5 border-cell',
-            display ? 'border-ink' : 'border-line',
+            poster ? 'border-ink' : 'border-line',
           ].join(' ')}
           style={
-            display
+            poster
               ? {
                   fontVariationSettings: `"wdth" ${ANYBODY.aaPreview.wdth}, "wght" ${ANYBODY.aaPreview.wght}`,
                 }

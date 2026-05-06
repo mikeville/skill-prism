@@ -26,16 +26,17 @@ const tierFill: Record<Tier, string> = {
 };
 
 const tierTypePlain: Record<Tier, string> = {
-  primary: 'text-primary font-primary text-ink',
-  secondary: 'text-secondary font-secondary text-ink',
-  tertiary: 'text-tertiary font-tertiary text-ink-mut',
+  primary: 'text-plain-primary md:text-plain-primary-md font-primary text-ink',
+  secondary: 'text-plain-secondary md:text-plain-secondary-md font-secondary text-ink',
+  tertiary: 'text-plain-tertiary md:text-plain-tertiary-md font-tertiary text-ink-mut',
 };
 
-const compactSecondaryTypePlain = 'text-tertiary font-secondary text-ink-mut';
+const compactSecondaryTypePlain =
+  'text-plain-tertiary md:text-plain-tertiary-md font-secondary text-ink-mut';
 
-// Display-mode color classes only — fontFamily is set inline from the active
+// Poster-mode color classes only — fontFamily is set inline from the active
 // typeface, and font-size + weight are owned by the fit hook.
-const tierColorDisplay: Record<Tier, string> = {
+const tierColorPoster: Record<Tier, string> = {
   primary: 'text-ink',
   secondary: 'text-ink',
   tertiary: 'text-ink-mut',
@@ -50,7 +51,7 @@ function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
 export function Cell({ tier, state, content, onClick, children, cellRef, compact }: CellProps) {
   const { mode } = useTypeMode();
   const font = ANYBODY;
-  const display = mode === 'display';
+  const poster = mode === 'poster';
   const clickable = !!onClick && state === 'content';
 
   // Track cell dimensions so splitLines can break long words contextually —
@@ -79,12 +80,12 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
 
   const fitRef = useFitText<HTMLDivElement>({
     tier: fitTierFor(tier, compact),
-    enabled: display && state === 'content' && lines.length > 0,
-    deps: [linesKey, display],
+    enabled: poster && state === 'content' && lines.length > 0,
+    deps: [linesKey, poster],
   });
 
   // 1rem padding (≈16px) inside every cell. The fit algorithm reads container
-  // padding via getComputedStyle, so display-mode text still sizes to fill the
+  // padding via getComputedStyle, so poster-mode text still sizes to fill the
   // inner area; tracking pushes the first/last char flush with the inner edge
   // rather than the cell border.
 const padding = 'p-4';
@@ -94,10 +95,10 @@ const padding = 'p-4';
   const hover = clickable ? 'cursor-pointer hover:bg-fill-page' : '';
   const fill = tierFill[tier];
 
-  const type = display
+  const type = poster
     ? compact && tier === 'secondary'
       ? 'text-ink-mut'
-      : tierColorDisplay[tier]
+      : tierColorPoster[tier]
     : compact && tier === 'secondary'
       ? compactSecondaryTypePlain
       : tierTypePlain[tier];
@@ -113,7 +114,7 @@ const padding = 'p-4';
       ) : state === 'empty' ? (
         <span className="text-ink-faint">—</span>
       ) : content ? (
-        display ? (
+        poster ? (
           <div
             ref={fitRef}
             className="flex flex-col items-stretch justify-center w-full h-full uppercase"
@@ -146,7 +147,7 @@ const padding = 'p-4';
           </div>
         ) : (
           <span
-            className="block w-full break-words hyphens-auto [text-wrap:balance]"
+            className="block w-full uppercase break-words hyphens-auto [text-wrap:balance]"
             style={{ textBoxTrim: 'trim-both', textBoxEdge: 'cap alphabetic' }}
           >
             {content}
