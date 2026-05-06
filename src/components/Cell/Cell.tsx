@@ -126,6 +126,12 @@ const padding = 'p-4';
                 style={{
                   lineHeight: font.lineHeight,
                   fontVariationSettings: `"wdth" ${font.cellStaticDisplay.wdth}, "wght" ${font.cellStaticDisplay.wght}`,
+                  // Trim the line-box to the cap-to-baseline rectangle so the
+                  // visible glyphs (which have no descender in all-caps) sit
+                  // in the geometric center of the cell instead of riding
+                  // high under the reserved-but-unused descender slack.
+                  textBoxTrim: 'trim-both',
+                  textBoxEdge: 'cap alphabetic',
                 }}
               >
                 {line}
@@ -133,7 +139,10 @@ const padding = 'p-4';
             ))}
           </div>
         ) : (
-          <span className="block w-full break-words hyphens-auto [text-wrap:balance]">
+          <span
+            className="block w-full break-words hyphens-auto [text-wrap:balance]"
+            style={{ textBoxTrim: 'trim-both', textBoxEdge: 'cap alphabetic' }}
+          >
             {content}
           </span>
         )
