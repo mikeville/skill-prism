@@ -68,18 +68,18 @@ function AppInner() {
       {inEmpty ? (
         <EmptyState onSubmit={handleSubmit} />
       ) : (
-        <div className="absolute inset-0 flex flex-col">
-          <Topbar
-            path={path}
-            onJump={handleJump}
-            onReset={handleReset}
-            regenerating={regenerating}
-            canOpenSkill={!!data}
-            skillOpen={skillOpen}
-            onToggleSkill={() => setSkillOpen((v) => !v)}
-          />
-          <div className="flex-1 min-h-0 flex">
-            <div ref={gridContainerRef} className="relative flex-1 min-w-0">
+        <div className="absolute inset-0 flex">
+          <div ref={gridContainerRef} className="flex flex-col flex-1 min-w-0">
+            <Topbar
+              path={path}
+              onJump={handleJump}
+              onReset={handleReset}
+              regenerating={regenerating}
+              canOpenSkill={!!data}
+              skillOpen={skillOpen}
+              onToggleSkill={() => setSkillOpen((v) => !v)}
+            />
+            <div className="relative flex-1 min-h-0">
               <FractalView
                 data={data}
                 depth={depth}
@@ -92,12 +92,12 @@ function AppInner() {
                 </div>
               )}
             </div>
-            <SkillSidebar
-              markdown={skillMarkdown}
-              open={skillOpen}
-              onClose={() => setSkillOpen(false)}
-            />
           </div>
+          <SkillSidebar
+            markdown={skillMarkdown}
+            open={skillOpen}
+            onClose={() => setSkillOpen(false)}
+          />
         </div>
       )}
     </div>

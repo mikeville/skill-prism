@@ -25,7 +25,10 @@ export function Topbar({
   const poster = mode === 'poster';
 
   return (
-    <div className="flex items-center gap-6 px-8 h-[62px] bg-fill-page border-b border-line shrink-0">
+    <div
+      className="flex items-center gap-6 px-8 shrink-0"
+      style={{ height: 'clamp(48px, 6vmin, 72px)' }}
+    >
       <button
         type="button"
         onClick={onReset}
