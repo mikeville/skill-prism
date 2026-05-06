@@ -1,8 +1,8 @@
 import { hyphenateSync } from 'hyphen/en';
-import { FONT_CONFIG } from './fontConfig';
+import { getActiveFont } from './fontConfig';
 
-// Per-tier presets for the multi-line fit. Axis ranges come from FONT_CONFIG
-// so swapping typefaces is a one-line change in fontConfig.ts.
+// Per-tier presets for the multi-line fit. Axis ranges come from the active
+// FontConfig so swapping typefaces at runtime affects every subsequent fit.
 export type FitTier = 'primary' | 'secondary' | 'tertiary';
 
 export type FitPreset = {
@@ -20,22 +20,23 @@ const SIZE_MAX_BY_TIER: Record<FitTier, number> = {
   tertiary: 160,
 };
 
-function buildPresets(cfg: typeof FONT_CONFIG): Record<FitTier, FitPreset> {
+export function getPreset(tier: FitTier): FitPreset {
+  const cfg = getActiveFont();
   const sMin = cfg.axes.opsz[0];
   return {
-    primary: { fontSize: [sMin, SIZE_MAX_BY_TIER.primary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
-    secondary: { fontSize: [sMin, SIZE_MAX_BY_TIER.secondary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
-    tertiary: { fontSize: [sMin, SIZE_MAX_BY_TIER.tertiary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
+    fontSize: [sMin, SIZE_MAX_BY_TIER[tier]],
+    wdth: cfg.axes.wdth,
+    wght: cfg.axes.wght,
   };
 }
-
-export const PRESETS: Record<FitTier, FitPreset> = buildPresets(FONT_CONFIG);
 
 // Line-box-to-fontSize ratio for our caps-only display. Roughly matches the
 // font's cap height so leading produces line-boxes exactly cap-height tall
 // (text flush with line-box top/bottom). fontSize is then set to
-// allottedHeight / LINE_HEIGHT so numLines × lineBox === cellHeight.
-export const LINE_HEIGHT = FONT_CONFIG.lineHeight;
+// allottedHeight / lineHeight so numLines × lineBox === cellHeight.
+export function getLineHeight(): number {
+  return getActiveFont().lineHeight;
+}
 
 const SLACK_PX = 1; // accept overflow up to 1px to terminate binary search early
 
@@ -198,7 +199,6 @@ function getMeasureEl(): HTMLSpanElement | null {
     measureEl.style.position = 'absolute';
     measureEl.style.left = '-9999px';
     measureEl.style.top = '-9999px';
-    measureEl.style.fontFamily = FONT_CONFIG.family;
     measureEl.style.whiteSpace = 'nowrap';
     measureEl.style.lineHeight = '1';
     measureEl.style.textTransform = 'uppercase';
@@ -207,6 +207,8 @@ function getMeasureEl(): HTMLSpanElement | null {
     measureEl.setAttribute('aria-hidden', 'true');
     document.body.appendChild(measureEl);
   }
+  // Refresh font-family on every read so probes use the active typeface.
+  measureEl.style.fontFamily = getActiveFont().family;
   return measureEl;
 }
 
@@ -229,8 +231,8 @@ function predictMaxSize(text: string, cellW: number, wdth: number, wght: number)
 }
 
 // ---------- Break decision ----------
-function fillRatio(fontSize: number, lineCount: number, cellH: number): number {
-  return Math.min(1, (lineCount * fontSize * LINE_HEIGHT) / cellH);
+function fillRatio(fontSize: number, lineCount: number, cellH: number, lineH: number): number {
+  return Math.min(1, (lineCount * fontSize * lineH) / cellH);
 }
 
 function shouldBreak(
@@ -244,13 +246,16 @@ function shouldBreak(
   if (len > ABSOLUTE_LONG_THRESHOLD) return true;
   if (!cellW || !cellH) return false;
 
+  const cfg = getActiveFont();
+  const lineH = cfg.lineHeight;
+
   // Intact prediction: width-bound at min wdth/wght, capped by per-line height.
-  const wMin = FONT_CONFIG.axes.wdth[0];
-  const gMin = FONT_CONFIG.axes.wght[0];
+  const wMin = cfg.axes.wdth[0];
+  const gMin = cfg.axes.wght[0];
   const intactWidthBound = predictMaxSize(token, cellW, wMin, gMin);
-  const intactHeightBound = cellH / (lineCount * LINE_HEIGHT);
+  const intactHeightBound = cellH / (lineCount * lineH);
   const intactSize = Math.min(intactWidthBound, intactHeightBound);
-  const intactFill = fillRatio(intactSize, lineCount, cellH);
+  const intactFill = fillRatio(intactSize, lineCount, cellH, lineH);
 
   // Broken prediction: take the longer half (with trailing hyphen) as the
   // binding chunk, since the shorter half always fits at the same size.
@@ -259,9 +264,9 @@ function shouldBreak(
   const right = token.slice(pos);
   const longer = left.length >= right.length ? `${left}-` : right;
   const brokenWidthBound = predictMaxSize(longer, cellW, wMin, gMin);
-  const brokenHeightBound = cellH / ((lineCount + 1) * LINE_HEIGHT);
+  const brokenHeightBound = cellH / ((lineCount + 1) * lineH);
   const brokenSize = Math.min(brokenWidthBound, brokenHeightBound);
-  const brokenFill = fillRatio(brokenSize, lineCount + 1, cellH);
+  const brokenFill = fillRatio(brokenSize, lineCount + 1, cellH, lineH);
 
   // Break if breaking meaningfully fills the cell better, or if intact
   // dramatically under-fills and broken at least matches it.
@@ -339,7 +344,7 @@ function searchMax(lo: number, hi: number, probe: (v: number) => boolean, iters 
 
 // Fit a single line, prioritizing simultaneous width AND height fill:
 //   1. Pick targetSize so the line-box height matches its allotted vertical
-//      share (size = allottedH / LINE_HEIGHT — text is then flush with cell
+//      share (size = allottedH / lineHeight — text is then flush with cell
 //      top + bottom edges).
 //   2. At max wdth + max wght, if width fits, apply letter-spacing to push
 //      characters to both horizontal edges. The line span uses
@@ -357,7 +362,7 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
   el.style.letterSpacing = '0';
   el.style.textAlign = '';
 
-  const targetSize = clamp(allottedH / LINE_HEIGHT, sMin, sMax);
+  const targetSize = clamp(allottedH / getActiveFont().lineHeight, sMin, sMax);
   const fitsW = () => el.scrollWidth <= cellW + SLACK_PX;
 
   // Step 1: max wdth/wght at targetSize.
@@ -450,7 +455,7 @@ export function fitMultiline(container: HTMLElement, tier: FitTier) {
   if (cellW < 4 || cellH < 4) return;
 
   const allottedH = cellH / lines.length;
-  const preset = PRESETS[tier];
+  const preset = getPreset(tier);
   for (const line of lines) fitLine(line, cellW, allottedH, preset);
 }
 

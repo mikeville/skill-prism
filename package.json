@@ -12,6 +12,8 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@fontsource-variable/anybody": "^5.2.7",
+    "@fontsource-variable/bricolage-grotesque": "^5.2.10",
     "@fontsource-variable/roboto-flex": "^5.2.8",
     "@fontsource/inter": "^5.0.18",
     "hyphen": "^1.14.1",

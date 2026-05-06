@@ -2,9 +2,9 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { CellState, Tier } from '../../types';
 import { Skeleton } from './Skeleton';
 import { useTypeMode } from '../../contexts/TypeMode';
+import { useTypeface } from '../../contexts/Typeface';
 import { useFitText } from '../../hooks/useFitText';
-import { splitLines, LINE_HEIGHT, type FitTier } from '../../lib/fitText';
-import { FONT_CONFIG } from '../../lib/fontConfig';
+import { splitLines, type FitTier } from '../../lib/fitText';
 
 type CellProps = {
   tier: Tier;
@@ -33,7 +33,8 @@ const tierTypePlain: Record<Tier, string> = {
 
 const compactSecondaryTypePlain = 'text-tertiary font-secondary text-ink';
 
-// Display-mode color classes only (font-size + weight are owned by the fit hook).
+// Display-mode color classes only — fontFamily is set inline from the active
+// typeface, and font-size + weight are owned by the fit hook.
 const tierColorDisplay: Record<Tier, string> = {
   primary: 'text-ink',
   secondary: 'text-ink',
@@ -48,6 +49,7 @@ function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
 
 export function Cell({ tier, state, content, onClick, children, cellRef, compact }: CellProps) {
   const { mode } = useTypeMode();
+  const { key: typefaceKey, font } = useTypeface();
   const display = mode === 'display';
   const clickable = !!onClick && state === 'content';
 
@@ -78,7 +80,7 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
   const fitRef = useFitText<HTMLDivElement>({
     tier: fitTierFor(tier, compact),
     enabled: display && state === 'content' && lines.length > 0,
-    deps: [linesKey, display],
+    deps: [linesKey, display, typefaceKey],
   });
 
   // Display mode: minimal 2px padding so the first/last char of each line
@@ -92,7 +94,7 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
   const fill = tierFill[tier];
 
   const type = display
-    ? `font-display ${tierColorDisplay[tier]}`
+    ? tierColorDisplay[tier]
     : compact && tier === 'secondary'
       ? compactSecondaryTypePlain
       : tierTypePlain[tier];
@@ -112,14 +114,15 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
           <div
             ref={fitRef}
             className="flex flex-col items-stretch justify-center w-full h-full uppercase"
+            style={{ fontFamily: font.family }}
           >
             {lines.map((line, i) => (
               <span
                 key={i}
                 className="block w-full whitespace-nowrap text-center"
                 style={{
-                  lineHeight: LINE_HEIGHT,
-                  fontVariationSettings: `"wdth" ${FONT_CONFIG.cellStaticDisplay.wdth}, "wght" ${FONT_CONFIG.cellStaticDisplay.wght}`,
+                  lineHeight: font.lineHeight,
+                  fontVariationSettings: `"wdth" ${font.cellStaticDisplay.wdth}, "wght" ${font.cellStaticDisplay.wght}`,
                 }}
               >
                 {line}

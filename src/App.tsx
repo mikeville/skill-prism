@@ -6,6 +6,7 @@ import type { ZoomIntent } from './components/FractalView/FractalView';
 import { SkillSidebar } from './components/SkillSidebar/SkillSidebar';
 import { Topbar } from './components/Topbar/Topbar';
 import { TypeModeProvider } from './contexts/TypeMode';
+import { TypefaceProvider } from './contexts/Typeface';
 import { useBreakdown } from './hooks/useBreakdown';
 import { useContainerDepth } from './hooks/useContainerDepth';
 import { usePath } from './hooks/usePath';
@@ -14,9 +15,11 @@ import { buildSkillMarkdown } from './lib/exportSkill';
 
 export default function App() {
   return (
-    <TypeModeProvider>
-      <AppInner />
-    </TypeModeProvider>
+    <TypefaceProvider>
+      <TypeModeProvider>
+        <AppInner />
+      </TypeModeProvider>
+    </TypefaceProvider>
   );
 }
 
