@@ -14,10 +14,11 @@ module.exports = {
       line: '#ffffff',
     },
     fontFamily: {
-      sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
-      // Display family — keep in sync with src/lib/fontConfig.ts FONT_CONFIG.family.
-      // Duplicated here because CommonJS Tailwind config can't import TS modules.
-      display: ['"Roboto Flex Variable"', 'Inter', 'system-ui', 'sans-serif'],
+      // Anybody is the only font in use across the app — same family for body
+      // copy, UI labels, and grid display text. Static UI weights are set via
+      // font-variation-settings (see globals.css body); display-mode grid text
+      // sets its own variation settings inline.
+      sans: ['"Anybody Variable"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
       mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
     },
     fontSize: {

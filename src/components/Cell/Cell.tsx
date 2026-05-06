@@ -2,9 +2,9 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { CellState, Tier } from '../../types';
 import { Skeleton } from './Skeleton';
 import { useTypeMode } from '../../contexts/TypeMode';
-import { useTypeface } from '../../contexts/Typeface';
 import { useFitText } from '../../hooks/useFitText';
 import { splitLines, type FitTier } from '../../lib/fitText';
+import { ANYBODY } from '../../lib/fontConfig';
 
 type CellProps = {
   tier: Tier;
@@ -49,7 +49,7 @@ function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
 
 export function Cell({ tier, state, content, onClick, children, cellRef, compact }: CellProps) {
   const { mode } = useTypeMode();
-  const { key: typefaceKey, font } = useTypeface();
+  const font = ANYBODY;
   const display = mode === 'display';
   const clickable = !!onClick && state === 'content';
 
@@ -80,7 +80,7 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
   const fitRef = useFitText<HTMLDivElement>({
     tier: fitTierFor(tier, compact),
     enabled: display && state === 'content' && lines.length > 0,
-    deps: [linesKey, display, typefaceKey],
+    deps: [linesKey, display],
   });
 
   // 1rem padding (≈16px) inside every cell. The fit algorithm reads container
