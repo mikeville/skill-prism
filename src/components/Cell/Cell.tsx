@@ -87,7 +87,7 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
   // padding via getComputedStyle, so display-mode text still sizes to fill the
   // inner area; tracking pushes the first/last char flush with the inner edge
   // rather than the cell border.
-  const padding = 'p-4';
+const padding = 'p-4';
   const base =
     `relative flex items-center justify-center text-center overflow-hidden ` +
     `transition-colors duration-hover w-full h-full ${padding}`;

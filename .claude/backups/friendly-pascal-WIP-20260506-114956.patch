@@ -1,0 +1,601 @@
+diff --git a/.claude/launch.json b/.claude/launch.json
+index 142005a..82f48b6 100644
+--- a/.claude/launch.json
++++ b/.claude/launch.json
+@@ -3,9 +3,9 @@
+   "configurations": [
+     {
+       "name": "vite",
+-      "runtimeExecutable": "npm",
+-      "runtimeArgs": ["run", "dev"],
+-      "port": 5173
++      "runtimeExecutable": "npx",
++      "runtimeArgs": ["vite", "--port", "5188", "--strictPort"],
++      "port": 5188
+     }
+   ]
+ }
+diff --git a/package-lock.json b/package-lock.json
+index e9bea85..c9bcf05 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -8,6 +8,8 @@
+       "name": "ohtani",
+       "version": "0.1.0",
+       "dependencies": {
++        "@fontsource-variable/anybody": "^5.2.7",
++        "@fontsource-variable/bricolage-grotesque": "^5.2.10",
+         "@fontsource-variable/roboto-flex": "^5.2.8",
+         "@fontsource/inter": "^5.0.18",
+         "hyphen": "^1.14.1",
+@@ -715,6 +717,24 @@
+         "node": ">=12"
+       }
+     },
++    "node_modules/@fontsource-variable/anybody": {
++      "version": "5.2.7",
++      "resolved": "https://registry.npmjs.org/@fontsource-variable/anybody/-/anybody-5.2.7.tgz",
++      "integrity": "sha512-9piOOIOHSI2U8qOQag7xxTaMHAFjsYKOq4W3zJyZoXAebcPTv0c1bPmbFpwBdgG9zUJshfWhMzSoDCiLAKFWcg==",
++      "license": "OFL-1.1",
++      "funding": {
++        "url": "https://github.com/sponsors/ayuhito"
++      }
++    },
++    "node_modules/@fontsource-variable/bricolage-grotesque": {
++      "version": "5.2.10",
++      "resolved": "https://registry.npmjs.org/@fontsource-variable/bricolage-grotesque/-/bricolage-grotesque-5.2.10.tgz",
++      "integrity": "sha512-5EDsCqgGpKVcJWE4sg9ydli+t5WM97mISYw5lla/Ev4z71FwXh1oN0YUU8xjkRW9+wBCGD9R+ntAvI8G4bUFJg==",
++      "license": "OFL-1.1",
++      "funding": {
++        "url": "https://github.com/sponsors/ayuhito"
++      }
++    },
+     "node_modules/@fontsource-variable/roboto-flex": {
+       "version": "5.2.8",
+       "resolved": "https://registry.npmjs.org/@fontsource-variable/roboto-flex/-/roboto-flex-5.2.8.tgz",
+diff --git a/package.json b/package.json
+index dffe012..90d9eae 100644
+--- a/package.json
++++ b/package.json
+@@ -12,6 +12,8 @@
+     "format": "prettier --write ."
+   },
+   "dependencies": {
++    "@fontsource-variable/anybody": "^5.2.7",
++    "@fontsource-variable/bricolage-grotesque": "^5.2.10",
+     "@fontsource-variable/roboto-flex": "^5.2.8",
+     "@fontsource/inter": "^5.0.18",
+     "hyphen": "^1.14.1",
+diff --git a/src/App.tsx b/src/App.tsx
+index 3b17566..314189d 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -6,6 +6,7 @@ import type { ZoomIntent } from './components/FractalView/FractalView';
+ import { SkillSidebar } from './components/SkillSidebar/SkillSidebar';
+ import { Topbar } from './components/Topbar/Topbar';
+ import { TypeModeProvider } from './contexts/TypeMode';
++import { TypefaceProvider } from './contexts/Typeface';
+ import { useBreakdown } from './hooks/useBreakdown';
+ import { useContainerDepth } from './hooks/useContainerDepth';
+ import { usePath } from './hooks/usePath';
+@@ -14,9 +15,11 @@ import { buildSkillMarkdown } from './lib/exportSkill';
+ 
+ export default function App() {
+   return (
+-    <TypeModeProvider>
+-      <AppInner />
+-    </TypeModeProvider>
++    <TypefaceProvider>
++      <TypeModeProvider>
++        <AppInner />
++      </TypeModeProvider>
++    </TypefaceProvider>
+   );
+ }
+ 
+diff --git a/src/components/Cell/Cell.tsx b/src/components/Cell/Cell.tsx
+index 8c0d640..322dce4 100644
+--- a/src/components/Cell/Cell.tsx
++++ b/src/components/Cell/Cell.tsx
+@@ -2,9 +2,9 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+ import type { CellState, Tier } from '../../types';
+ import { Skeleton } from './Skeleton';
+ import { useTypeMode } from '../../contexts/TypeMode';
++import { useTypeface } from '../../contexts/Typeface';
+ import { useFitText } from '../../hooks/useFitText';
+-import { splitLines, LINE_HEIGHT, type FitTier } from '../../lib/fitText';
+-import { FONT_CONFIG } from '../../lib/fontConfig';
++import { splitLines, type FitTier } from '../../lib/fitText';
+ 
+ type CellProps = {
+   tier: Tier;
+@@ -33,7 +33,8 @@ const tierTypePlain: Record<Tier, string> = {
+ 
+ const compactSecondaryTypePlain = 'text-tertiary font-secondary text-ink';
+ 
+-// Display-mode color classes only (font-size + weight are owned by the fit hook).
++// Display-mode color classes only — fontFamily is set inline from the active
++// typeface, and font-size + weight are owned by the fit hook.
+ const tierColorDisplay: Record<Tier, string> = {
+   primary: 'text-ink',
+   secondary: 'text-ink',
+@@ -48,6 +49,7 @@ function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
+ 
+ export function Cell({ tier, state, content, onClick, children, cellRef, compact }: CellProps) {
+   const { mode } = useTypeMode();
++  const { key: typefaceKey, font } = useTypeface();
+   const display = mode === 'display';
+   const clickable = !!onClick && state === 'content';
+ 
+@@ -78,13 +80,14 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
+   const fitRef = useFitText<HTMLDivElement>({
+     tier: fitTierFor(tier, compact),
+     enabled: display && state === 'content' && lines.length > 0,
+-    deps: [linesKey, display],
++    deps: [linesKey, display, typefaceKey],
+   });
+ 
+-  // Display mode: minimal 2px padding so the first/last char of each line
+-  // sits right at the cell edge without crashing into neighbouring cells'
+-  // text. Plain mode keeps the wider breathing room.
+-  const padding = display ? 'p-0.5' : 'p-2';
++  // 1rem padding (≈16px) inside every cell. The fit algorithm reads container
++  // padding via getComputedStyle, so display-mode text still sizes to fill the
++  // inner area; tracking pushes the first/last char flush with the inner edge
++  // rather than the cell border.
++  const padding = 'p-4';
+   const base =
+     `relative flex items-center justify-center text-center overflow-hidden ` +
+     `transition-colors duration-hover w-full h-full ${padding}`;
+@@ -92,7 +95,7 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
+   const fill = tierFill[tier];
+ 
+   const type = display
+-    ? `font-display ${tierColorDisplay[tier]}`
++    ? tierColorDisplay[tier]
+     : compact && tier === 'secondary'
+       ? compactSecondaryTypePlain
+       : tierTypePlain[tier];
+@@ -112,14 +115,15 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
+           <div
+             ref={fitRef}
+             className="flex flex-col items-stretch justify-center w-full h-full uppercase"
++            style={{ fontFamily: font.family }}
+           >
+             {lines.map((line, i) => (
+               <span
+                 key={i}
+                 className="block w-full whitespace-nowrap text-center"
+                 style={{
+-                  lineHeight: LINE_HEIGHT,
+-                  fontVariationSettings: `"wdth" ${FONT_CONFIG.cellStaticDisplay.wdth}, "wght" ${FONT_CONFIG.cellStaticDisplay.wght}`,
++                  lineHeight: font.lineHeight,
++                  fontVariationSettings: `"wdth" ${font.cellStaticDisplay.wdth}, "wght" ${font.cellStaticDisplay.wght}`,
+                 }}
+               >
+                 {line}
+diff --git a/src/components/FractalView/Level.tsx b/src/components/FractalView/Level.tsx
+index fcd266e..2d007eb 100644
+--- a/src/components/FractalView/Level.tsx
++++ b/src/components/FractalView/Level.tsx
+@@ -119,8 +119,8 @@ export function Level({
+   // grouping. `standalone` mode (mobile single-grid) adds the same faint
+   // frame; on desktop the outer wrapper paints dividers around it.
+   const wrapperClasses = standalone
+-    ? 'grid gap-px w-full h-full bg-[#f4f4f4] border-cell border-[#f4f4f4] box-border overflow-hidden'
+-    : 'grid gap-px w-full h-full bg-[#f4f4f4] overflow-hidden';
++    ? 'grid gap-10 w-full h-full bg-[#f4f4f4] border-cell border-[#f4f4f4] box-border overflow-hidden'
++    : 'grid gap-10 w-full h-full bg-[#f4f4f4] overflow-hidden';
+ 
+   return (
+     <div
+diff --git a/src/components/SkillSidebar/SkillSidebar.tsx b/src/components/SkillSidebar/SkillSidebar.tsx
+index f303439..ffa6837 100644
+--- a/src/components/SkillSidebar/SkillSidebar.tsx
++++ b/src/components/SkillSidebar/SkillSidebar.tsx
+@@ -41,7 +41,7 @@ export function SkillSidebar({ markdown, open, onClose }: Props) {
+       ].join(' ')}
+     >
+       <div className="flex items-center px-8 h-[62px] border-b border-line shrink-0">
+-        <span className="text-secondary font-secondary">Skill draft</span>
++        <span className="text-secondary font-secondary">Skill fs</span>
+         <button
+           type="button"
+           onClick={onClose}
+diff --git a/src/components/Topbar/Topbar.tsx b/src/components/Topbar/Topbar.tsx
+index 6a1f648..e7474af 100644
+--- a/src/components/Topbar/Topbar.tsx
++++ b/src/components/Topbar/Topbar.tsx
+@@ -1,5 +1,7 @@
++import { useEffect, useRef, useState } from 'react';
+ import { useTypeMode } from '../../contexts/TypeMode';
+-import { FONT_CONFIG } from '../../lib/fontConfig';
++import { useTypeface } from '../../contexts/Typeface';
++import { FONTS, TYPEFACE_KEYS, TYPEFACE_LABELS, type TypefaceKey } from '../../lib/fontConfig';
+ import { Breadcrumb } from './Breadcrumb';
+ 
+ type Props = {
+@@ -22,7 +24,9 @@ export function Topbar({
+   onToggleSkill,
+ }: Props) {
+   const { mode, toggle } = useTypeMode();
++  const { key: typefaceKey, font, set: setTypeface } = useTypeface();
+   const display = mode === 'display';
++
+   return (
+     <div className="flex items-center gap-6 px-8 h-[62px] bg-fill-page border-b border-line shrink-0">
+       <button
+@@ -33,27 +37,30 @@ export function Topbar({
+         Ohtani
+       </button>
+       <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />
+-      <button
+-        type="button"
+-        onClick={toggle}
+-        aria-pressed={display}
+-        title={display ? 'Switch to plain typography' : 'Switch to display typography'}
+-        className={[
+-          'ml-auto text-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
+-          'leading-none px-2 py-0.5 border-cell',
+-          display ? 'border-ink' : 'border-line',
+-        ].join(' ')}
+-        style={
+-          display
+-            ? {
+-                fontFamily: FONT_CONFIG.family,
+-                fontVariationSettings: `"wdth" ${FONT_CONFIG.aaPreview.wdth}, "wght" ${FONT_CONFIG.aaPreview.wght}`,
+-              }
+-            : undefined
+-        }
+-      >
+-        Aa
+-      </button>
++      <div className="ml-auto flex items-center gap-2">
++        <button
++          type="button"
++          onClick={toggle}
++          aria-pressed={display}
++          title={display ? 'Switch to plain typography' : 'Switch to display typography'}
++          className={[
++            'text-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
++            'leading-none px-2 py-0.5 border-cell',
++            display ? 'border-ink' : 'border-line',
++          ].join(' ')}
++          style={
++            display
++              ? {
++                  fontFamily: font.family,
++                  fontVariationSettings: `"wdth" ${font.aaPreview.wdth}, "wght" ${font.aaPreview.wght}`,
++                }
++              : undefined
++          }
++        >
++          Aa
++        </button>
++        <TypefaceDropdown active={typefaceKey} onChange={setTypeface} />
++      </div>
+       {canOpenSkill && (
+         <button
+           type="button"
+@@ -70,3 +77,90 @@ export function Topbar({
+     </div>
+   );
+ }
++
++function TypefaceDropdown({
++  active,
++  onChange,
++}: {
++  active: TypefaceKey;
++  onChange: (key: TypefaceKey) => void;
++}) {
++  const [open, setOpen] = useState(false);
++  const wrapRef = useRef<HTMLDivElement | null>(null);
++
++  useEffect(() => {
++    if (!open) return;
++    const onDocClick = (e: MouseEvent) => {
++      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
++    };
++    const onKey = (e: KeyboardEvent) => {
++      if (e.key === 'Escape') setOpen(false);
++    };
++    document.addEventListener('mousedown', onDocClick);
++    document.addEventListener('keydown', onKey);
++    return () => {
++      document.removeEventListener('mousedown', onDocClick);
++      document.removeEventListener('keydown', onKey);
++    };
++  }, [open]);
++
++  return (
++    <div ref={wrapRef} className="relative">
++      <button
++        type="button"
++        onClick={() => setOpen((v) => !v)}
++        aria-haspopup="listbox"
++        aria-expanded={open}
++        title="Switch typeface"
++        className={[
++          'text-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
++          'leading-none px-2 py-0.5 border-cell flex items-center gap-1.5',
++          open ? 'border-ink' : 'border-line',
++        ].join(' ')}
++        style={{
++          fontFamily: FONTS[active].family,
++          fontVariationSettings: `"wdth" ${FONTS[active].aaPreview.wdth}, "wght" ${FONTS[active].aaPreview.wght}`,
++        }}
++      >
++        <span>{TYPEFACE_LABELS[active]}</span>
++        <span aria-hidden className="text-[0.7em] leading-none translate-y-px">▾</span>
++      </button>
++      {open && (
++        <ul
++          role="listbox"
++          className="absolute right-0 top-full mt-1 z-10 min-w-[200px] bg-paper border-cell border-ink py-1"
++        >
++          {TYPEFACE_KEYS.map((key) => {
++            const cfg = FONTS[key];
++            const selected = key === active;
++            return (
++              <li key={key} role="option" aria-selected={selected}>
++                <button
++                  type="button"
++                  onClick={() => {
++                    onChange(key);
++                    setOpen(false);
++                  }}
++                  className={[
++                    'w-full text-left text-secondary leading-none px-3 py-2',
++                    'hover:bg-fill-page transition-colors duration-hover',
++                    selected ? 'text-ink' : 'text-ink',
++                  ].join(' ')}
++                  style={{
++                    fontFamily: cfg.family,
++                    fontVariationSettings: `"wdth" ${cfg.aaPreview.wdth}, "wght" ${cfg.aaPreview.wght}`,
++                  }}
++                >
++                  <span className="inline-block w-3 mr-2 align-middle">
++                    {selected ? '✓' : ''}
++                  </span>
++                  {TYPEFACE_LABELS[key]}
++                </button>
++              </li>
++            );
++          })}
++        </ul>
++      )}
++    </div>
++  );
++}
+diff --git a/src/lib/fitText.ts b/src/lib/fitText.ts
+index 25bf94e..4be4b44 100644
+--- a/src/lib/fitText.ts
++++ b/src/lib/fitText.ts
+@@ -1,8 +1,8 @@
+ import { hyphenateSync } from 'hyphen/en';
+-import { FONT_CONFIG } from './fontConfig';
++import { getActiveFont } from './fontConfig';
+ 
+-// Per-tier presets for the multi-line fit. Axis ranges come from FONT_CONFIG
+-// so swapping typefaces is a one-line change in fontConfig.ts.
++// Per-tier presets for the multi-line fit. Axis ranges come from the active
++// FontConfig so swapping typefaces at runtime affects every subsequent fit.
+ export type FitTier = 'primary' | 'secondary' | 'tertiary';
+ 
+ export type FitPreset = {
+@@ -20,22 +20,23 @@ const SIZE_MAX_BY_TIER: Record<FitTier, number> = {
+   tertiary: 160,
+ };
+ 
+-function buildPresets(cfg: typeof FONT_CONFIG): Record<FitTier, FitPreset> {
++export function getPreset(tier: FitTier): FitPreset {
++  const cfg = getActiveFont();
+   const sMin = cfg.axes.opsz[0];
+   return {
+-    primary: { fontSize: [sMin, SIZE_MAX_BY_TIER.primary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
+-    secondary: { fontSize: [sMin, SIZE_MAX_BY_TIER.secondary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
+-    tertiary: { fontSize: [sMin, SIZE_MAX_BY_TIER.tertiary], wdth: cfg.axes.wdth, wght: cfg.axes.wght },
++    fontSize: [sMin, SIZE_MAX_BY_TIER[tier]],
++    wdth: cfg.axes.wdth,
++    wght: cfg.axes.wght,
+   };
+ }
+ 
+-export const PRESETS: Record<FitTier, FitPreset> = buildPresets(FONT_CONFIG);
+-
+ // Line-box-to-fontSize ratio for our caps-only display. Roughly matches the
+ // font's cap height so leading produces line-boxes exactly cap-height tall
+ // (text flush with line-box top/bottom). fontSize is then set to
+-// allottedHeight / LINE_HEIGHT so numLines × lineBox === cellHeight.
+-export const LINE_HEIGHT = FONT_CONFIG.lineHeight;
++// allottedHeight / lineHeight so numLines × lineBox === cellHeight.
++export function getLineHeight(): number {
++  return getActiveFont().lineHeight;
++}
+ 
+ const SLACK_PX = 1; // accept overflow up to 1px to terminate binary search early
+ 
+@@ -198,7 +199,6 @@ function getMeasureEl(): HTMLSpanElement | null {
+     measureEl.style.position = 'absolute';
+     measureEl.style.left = '-9999px';
+     measureEl.style.top = '-9999px';
+-    measureEl.style.fontFamily = FONT_CONFIG.family;
+     measureEl.style.whiteSpace = 'nowrap';
+     measureEl.style.lineHeight = '1';
+     measureEl.style.textTransform = 'uppercase';
+@@ -207,6 +207,8 @@ function getMeasureEl(): HTMLSpanElement | null {
+     measureEl.setAttribute('aria-hidden', 'true');
+     document.body.appendChild(measureEl);
+   }
++  // Refresh font-family on every read so probes use the active typeface.
++  measureEl.style.fontFamily = getActiveFont().family;
+   return measureEl;
+ }
+ 
+@@ -229,8 +231,8 @@ function predictMaxSize(text: string, cellW: number, wdth: number, wght: number)
+ }
+ 
+ // ---------- Break decision ----------
+-function fillRatio(fontSize: number, lineCount: number, cellH: number): number {
+-  return Math.min(1, (lineCount * fontSize * LINE_HEIGHT) / cellH);
++function fillRatio(fontSize: number, lineCount: number, cellH: number, lineH: number): number {
++  return Math.min(1, (lineCount * fontSize * lineH) / cellH);
+ }
+ 
+ function shouldBreak(
+@@ -244,13 +246,16 @@ function shouldBreak(
+   if (len > ABSOLUTE_LONG_THRESHOLD) return true;
+   if (!cellW || !cellH) return false;
+ 
++  const cfg = getActiveFont();
++  const lineH = cfg.lineHeight;
++
+   // Intact prediction: width-bound at min wdth/wght, capped by per-line height.
+-  const wMin = FONT_CONFIG.axes.wdth[0];
+-  const gMin = FONT_CONFIG.axes.wght[0];
++  const wMin = cfg.axes.wdth[0];
++  const gMin = cfg.axes.wght[0];
+   const intactWidthBound = predictMaxSize(token, cellW, wMin, gMin);
+-  const intactHeightBound = cellH / (lineCount * LINE_HEIGHT);
++  const intactHeightBound = cellH / (lineCount * lineH);
+   const intactSize = Math.min(intactWidthBound, intactHeightBound);
+-  const intactFill = fillRatio(intactSize, lineCount, cellH);
++  const intactFill = fillRatio(intactSize, lineCount, cellH, lineH);
+ 
+   // Broken prediction: take the longer half (with trailing hyphen) as the
+   // binding chunk, since the shorter half always fits at the same size.
+@@ -259,9 +264,9 @@ function shouldBreak(
+   const right = token.slice(pos);
+   const longer = left.length >= right.length ? `${left}-` : right;
+   const brokenWidthBound = predictMaxSize(longer, cellW, wMin, gMin);
+-  const brokenHeightBound = cellH / ((lineCount + 1) * LINE_HEIGHT);
++  const brokenHeightBound = cellH / ((lineCount + 1) * lineH);
+   const brokenSize = Math.min(brokenWidthBound, brokenHeightBound);
+-  const brokenFill = fillRatio(brokenSize, lineCount + 1, cellH);
++  const brokenFill = fillRatio(brokenSize, lineCount + 1, cellH, lineH);
+ 
+   // Break if breaking meaningfully fills the cell better, or if intact
+   // dramatically under-fills and broken at least matches it.
+@@ -339,7 +344,7 @@ function searchMax(lo: number, hi: number, probe: (v: number) => boolean, iters
+ 
+ // Fit a single line, prioritizing simultaneous width AND height fill:
+ //   1. Pick targetSize so the line-box height matches its allotted vertical
+-//      share (size = allottedH / LINE_HEIGHT — text is then flush with cell
++//      share (size = allottedH / lineHeight — text is then flush with cell
+ //      top + bottom edges).
+ //   2. At max wdth + max wght, if width fits, apply letter-spacing to push
+ //      characters to both horizontal edges. The line span uses
+@@ -357,7 +362,7 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
+   el.style.letterSpacing = '0';
+   el.style.textAlign = '';
+ 
+-  const targetSize = clamp(allottedH / LINE_HEIGHT, sMin, sMax);
++  const targetSize = clamp(allottedH / getActiveFont().lineHeight, sMin, sMax);
+   const fitsW = () => el.scrollWidth <= cellW + SLACK_PX;
+ 
+   // Step 1: max wdth/wght at targetSize.
+@@ -450,7 +455,7 @@ export function fitMultiline(container: HTMLElement, tier: FitTier) {
+   if (cellW < 4 || cellH < 4) return;
+ 
+   const allottedH = cellH / lines.length;
+-  const preset = PRESETS[tier];
++  const preset = getPreset(tier);
+   for (const line of lines) fitLine(line, cellW, allottedH, preset);
+ }
+ 
+diff --git a/src/lib/fontConfig.ts b/src/lib/fontConfig.ts
+index 88e9916..f17fc0e 100644
+--- a/src/lib/fontConfig.ts
++++ b/src/lib/fontConfig.ts
+@@ -1,12 +1,11 @@
+-// Single source of truth for the active display typeface. To swap fonts:
+-//   1. npm install @fontsource-variable/<new-font>
+-//   2. Update the import in src/main.tsx
+-//   3. Update tailwind.config.cjs `display` family stack
+-//   4. Define a new FontConfig below and re-alias FONT_CONFIG to it
++// Display typeface registry. The active font is selected at runtime via the
++// TypefaceContext; fitText.ts and Cell.tsx read it via getActiveFont() so a
++// switch propagates to the next render + re-fit pass.
+ //
+-// Candidate typefaces must expose all three standard variable axes:
+-// wdth, wght, opsz. Fonts missing any of these won't drop in without
+-// algorithm changes in fitText.ts.
++// Each FontConfig declares the font's variable axes (wdth/wght/opsz) so the
++// fit algorithm can pick the safe range. Fonts missing an axis (e.g. Anybody
++// has no opsz) just get a synthetic range — the browser ignores axis settings
++// the font doesn't expose.
+ 
+ export type FontConfig = {
+   family: string;
+@@ -34,4 +33,50 @@ export const ROBOTO_FLEX: FontConfig = {
+   cellStaticDisplay: { wdth: 100, wght: 600 },
+ };
+ 
+-export const FONT_CONFIG: FontConfig = ROBOTO_FLEX;
++export const BRICOLAGE_GROTESQUE: FontConfig = {
++  family: '"Bricolage Grotesque Variable", Inter, sans-serif',
++  axes: { wdth: [75, 100], wght: [200, 800], opsz: [12, 96] },
++  lineHeight: 0.82,
++  aaPreview: { wdth: 100, wght: 800 },
++  cellStaticDisplay: { wdth: 100, wght: 600 },
++};
++
++export const ANYBODY: FontConfig = {
++  // Anybody has no opsz axis; we still expose a synthetic range so the
++  // fit algorithm has a sane fontSize lower bound.
++  family: '"Anybody Variable", Inter, sans-serif',
++  axes: { wdth: [50, 150], wght: [100, 900], opsz: [10, 200] },
++  lineHeight: 0.8,
++  aaPreview: { wdth: 150, wght: 900 },
++  cellStaticDisplay: { wdth: 100, wght: 600 },
++};
++
++export type TypefaceKey = 'roboto' | 'bricolage' | 'anybody';
++
++export const FONTS: Record<TypefaceKey, FontConfig> = {
++  roboto: ROBOTO_FLEX,
++  bricolage: BRICOLAGE_GROTESQUE,
++  anybody: ANYBODY,
++};
++
++export const TYPEFACE_LABELS: Record<TypefaceKey, string> = {
++  roboto: 'Roboto Flex',
++  bricolage: 'Bricolage Grotesque',
++  anybody: 'Anybody',
++};
++
++export const TYPEFACE_KEYS: TypefaceKey[] = ['roboto', 'bricolage', 'anybody'];
++
++let activeKey: TypefaceKey = 'roboto';
++
++export function setActiveFont(key: TypefaceKey): void {
++  activeKey = key;
++}
++
++export function getActiveFontKey(): TypefaceKey {
++  return activeKey;
++}
++
++export function getActiveFont(): FontConfig {
++  return FONTS[activeKey];
++}
+diff --git a/src/main.tsx b/src/main.tsx
+index 5b8e98f..ea7a35e 100644
+--- a/src/main.tsx
++++ b/src/main.tsx
+@@ -1,8 +1,12 @@
+ import { StrictMode } from 'react';
+ import { createRoot } from 'react-dom/client';
+-// Display typeface — keep in sync with src/lib/fontConfig.ts FONT_CONFIG
+-// and tailwind.config.cjs `display` family stack.
++// Display typefaces — load all variants up front so the typeface dropdown
++// can switch instantly. Keep in sync with src/lib/fontConfig.ts.
++// roboto-flex/full.css carries wdth+wght+opsz; the other two only ship
++// wdth+wght via standard.css (no opsz axis on disk).
+ import '@fontsource-variable/roboto-flex/full.css';
++import '@fontsource-variable/bricolage-grotesque/standard.css';
++import '@fontsource-variable/anybody/standard.css';
+ import App from './App';
+ import './styles/globals.css';
+ 
