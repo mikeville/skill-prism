@@ -27,6 +27,16 @@ module.exports = {
       secondary: ['16px', { lineHeight: '1.25' }],
       primary: ['20px', { lineHeight: '1.2' }],
       input: ['20px', { lineHeight: '1.2' }],
+      // Utility-mode (plain) tier sizes — mobile-default values are tuned so
+      // common 6–9 char uppercase words fit the narrow mobile cells; desktop
+      // (md:) bumps up to roughly 2×/2×/3× the display tier sizes for the
+      // bigger desktop cells.
+      'utility-tertiary': ['16px', { lineHeight: '0.95' }],
+      'utility-secondary': ['18px', { lineHeight: '0.95' }],
+      'utility-primary': ['28px', { lineHeight: '0.95' }],
+      'utility-tertiary-md': ['24px', { lineHeight: '0.95' }],
+      'utility-secondary-md': ['32px', { lineHeight: '0.95' }],
+      'utility-primary-md': ['60px', { lineHeight: '0.95' }],
     },
     fontWeight: {
       regular: '400',
