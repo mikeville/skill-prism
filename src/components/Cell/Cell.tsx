@@ -26,13 +26,13 @@ const tierFill: Record<Tier, string> = {
 };
 
 const tierTypePlain: Record<Tier, string> = {
-  primary: 'text-plain-primary md:text-plain-primary-md font-primary text-ink',
-  secondary: 'text-plain-secondary md:text-plain-secondary-md font-secondary text-ink',
-  tertiary: 'text-plain-tertiary md:text-plain-tertiary-md font-tertiary text-ink-mut',
+  primary: 'text-plain-primary md:text-plain-primary-md text-ink',
+  secondary: 'text-plain-other md:text-plain-other-md text-ink',
+  tertiary: 'text-plain-other md:text-plain-other-md text-ink-mut',
 };
 
 const compactSecondaryTypePlain =
-  'text-plain-tertiary md:text-plain-tertiary-md font-secondary text-ink-mut';
+  'text-plain-other md:text-plain-other-md text-ink-mut';
 
 // Poster-mode color classes only — fontFamily is set inline from the active
 // typeface, and font-size + weight are owned by the fit hook.
@@ -148,10 +148,14 @@ const padding = 'p-4';
         ) : (
           // Plain mode shares splitLines with poster mode so long words get
           // TeX-syllable-hyphenated rather than character-broken. Each line is
-          // rendered as its own block so the multi-line stack reads cleanly.
-          // hyphens-auto is a CSS fallback when an individual line still
-          // doesn't fit at the static size.
-          <div className="flex flex-col items-stretch justify-center w-full h-full uppercase">
+          // rendered as its own block; hyphens-auto is the CSS fallback when
+          // an individual line still doesn't fit at the static size. fitRef
+          // stays attached on this branch too so useFitText's clearFit fires
+          // reliably on poster→plain toggle.
+          <div
+            ref={fitRef}
+            className="flex flex-col items-stretch justify-center w-full h-full uppercase"
+          >
             {lines.map((line, i) => {
               const isFirst = i === 0;
               const isLast = i === lines.length - 1;
@@ -163,7 +167,7 @@ const padding = 'p-4';
                   lang="en"
                   className="block w-full text-center hyphens-auto"
                   style={{
-                    fontVariationSettings: '"wdth" 60',
+                    fontVariationSettings: '"wdth" 100, "wght" 500',
                     textBoxTrim: trim,
                     textBoxEdge: 'cap alphabetic',
                   }}

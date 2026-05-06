@@ -27,15 +27,13 @@ module.exports = {
       secondary: ['16px', { lineHeight: '1.25' }],
       primary: ['20px', { lineHeight: '1.2' }],
       input: ['20px', { lineHeight: '1.2' }],
-      // Plain mode (uppercase, no fit pipeline) — bigger than poster's static
-      // tier sizes. Mobile-default + md: desktop variant so common 6–9 char
-      // words don't wrap awkwardly on the narrow mobile cells.
-      'plain-tertiary': ['16px', { lineHeight: '1.1' }],
-      'plain-secondary': ['18px', { lineHeight: '1.1' }],
-      'plain-primary': ['28px', { lineHeight: '1.1' }],
-      'plain-tertiary-md': ['24px', { lineHeight: '1.1' }],
-      'plain-secondary-md': ['32px', { lineHeight: '1.1' }],
-      'plain-primary-md': ['60px', { lineHeight: '1.1' }],
+      // Plain mode (uppercase, body-copy-like) — only two sizes: the focal
+      // primary cell is larger than every other cell. Sized so common
+      // 9–11 char uppercase words fit at conventional weight/width.
+      'plain-other': ['14px', { lineHeight: '0.9' }],
+      'plain-other-md': ['18px', { lineHeight: '0.9' }],
+      'plain-primary': ['24px', { lineHeight: '0.9' }],
+      'plain-primary-md': ['44px', { lineHeight: '0.9' }],
     },
     fontWeight: {
       regular: '400',

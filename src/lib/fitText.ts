@@ -465,8 +465,10 @@ export function clearFit(container: HTMLElement) {
   ) as HTMLElement[];
   for (const line of lines) {
     line.style.fontSize = '';
-    line.style.fontVariationSettings = '';
     line.style.letterSpacing = '';
     line.style.textAlign = '';
+    // Don't clear fontVariationSettings — plain mode owns this property via
+    // its own inline style and React only updates it on the next commit, so
+    // clearing here would erase plain's static axis settings on toggle.
   }
 }
