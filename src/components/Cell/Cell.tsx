@@ -119,24 +119,30 @@ const padding = 'p-4';
             className="flex flex-col items-stretch justify-center w-full h-full uppercase"
             style={{ fontFamily: font.family }}
           >
-            {lines.map((line, i) => (
-              <span
-                key={i}
-                className="block w-full whitespace-nowrap text-center"
-                style={{
-                  lineHeight: font.lineHeight,
-                  fontVariationSettings: `"wdth" ${font.cellStaticDisplay.wdth}, "wght" ${font.cellStaticDisplay.wght}`,
-                  // Trim the line-box to the cap-to-baseline rectangle so the
-                  // visible glyphs (which have no descender in all-caps) sit
-                  // in the geometric center of the cell instead of riding
-                  // high under the reserved-but-unused descender slack.
-                  textBoxTrim: 'trim-both',
-                  textBoxEdge: 'cap alphabetic',
-                }}
-              >
-                {line}
-              </span>
-            ))}
+            {lines.map((line, i) => {
+              // Trim the cap/baseline-to-line-box gap on the first and last
+              // visible lines only, so the stack hugs the cell flush at top
+              // and bottom for vertical centering — but inner lines keep their
+              // natural lineHeight 0.8 leading so adjacent lines don't touch.
+              const isFirst = i === 0;
+              const isLast = i === lines.length - 1;
+              const trim =
+                isFirst && isLast ? 'trim-both' : isFirst ? 'trim-start' : isLast ? 'trim-end' : 'none';
+              return (
+                <span
+                  key={i}
+                  className="block w-full whitespace-nowrap text-center"
+                  style={{
+                    lineHeight: font.lineHeight,
+                    fontVariationSettings: `"wdth" ${font.cellStaticDisplay.wdth}, "wght" ${font.cellStaticDisplay.wght}`,
+                    textBoxTrim: trim,
+                    textBoxEdge: 'cap alphabetic',
+                  }}
+                >
+                  {line}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <span
