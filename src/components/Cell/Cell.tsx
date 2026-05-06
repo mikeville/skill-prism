@@ -26,23 +26,12 @@ const tierFill: Record<Tier, string> = {
 };
 
 const tierTypePlain: Record<Tier, string> = {
-  primary: 'text-utility-primary md:text-utility-primary-md text-ink',
-  secondary: 'text-utility-secondary md:text-utility-secondary-md text-ink',
-  tertiary: 'text-utility-tertiary md:text-utility-tertiary-md text-ink-mut',
+  primary: 'text-primary font-primary text-ink',
+  secondary: 'text-secondary font-secondary text-ink',
+  tertiary: 'text-tertiary font-tertiary text-ink-mut',
 };
 
-const compactSecondaryTypePlain =
-  'text-utility-tertiary md:text-utility-tertiary-md text-ink-mut';
-
-// Anybody variation per tier in utility mode — static (no fit pipeline). The
-// wdth=75 (slightly condensed) is what lets the larger utility sizes still fit
-// common 7–9 char words without wrapping; longer words still wrap.
-const tierVariationPlain: Record<Tier, string> = {
-  primary: '"wdth" 75, "wght" 800',
-  secondary: '"wdth" 75, "wght" 600',
-  tertiary: '"wdth" 75, "wght" 500',
-};
-const compactSecondaryVariationPlain = '"wdth" 75, "wght" 600';
+const compactSecondaryTypePlain = 'text-tertiary font-secondary text-ink-mut';
 
 // Display-mode color classes only — fontFamily is set inline from the active
 // typeface, and font-size + weight are owned by the fit hook.
@@ -151,15 +140,8 @@ const padding = 'p-4';
           </div>
         ) : (
           <span
-            className="block w-full uppercase [overflow-wrap:break-word]"
-            style={{
-              fontVariationSettings:
-                compact && tier === 'secondary'
-                  ? compactSecondaryVariationPlain
-                  : tierVariationPlain[tier],
-              textBoxTrim: 'trim-both',
-              textBoxEdge: 'cap alphabetic',
-            }}
+            className="block w-full break-words hyphens-auto [text-wrap:balance]"
+            style={{ textBoxTrim: 'trim-both', textBoxEdge: 'cap alphabetic' }}
           >
             {content}
           </span>
