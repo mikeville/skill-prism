@@ -146,12 +146,33 @@ const padding = 'p-4';
             })}
           </div>
         ) : (
-          <span
-            className="block w-full uppercase break-words hyphens-auto [text-wrap:balance]"
-            style={{ textBoxTrim: 'trim-both', textBoxEdge: 'cap alphabetic' }}
-          >
-            {content}
-          </span>
+          // Plain mode shares splitLines with poster mode so long words get
+          // TeX-syllable-hyphenated rather than character-broken. Each line is
+          // rendered as its own block so the multi-line stack reads cleanly.
+          // hyphens-auto is a CSS fallback when an individual line still
+          // doesn't fit at the static size.
+          <div className="flex flex-col items-stretch justify-center w-full h-full uppercase">
+            {lines.map((line, i) => {
+              const isFirst = i === 0;
+              const isLast = i === lines.length - 1;
+              const trim =
+                isFirst && isLast ? 'trim-both' : isFirst ? 'trim-start' : isLast ? 'trim-end' : 'none';
+              return (
+                <span
+                  key={i}
+                  lang="en"
+                  className="block w-full text-center hyphens-auto"
+                  style={{
+                    fontVariationSettings: '"wdth" 60',
+                    textBoxTrim: trim,
+                    textBoxEdge: 'cap alphabetic',
+                  }}
+                >
+                  {line}
+                </span>
+              );
+            })}
+          </div>
         )
       ) : null}
       {children}
