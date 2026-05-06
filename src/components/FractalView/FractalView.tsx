@@ -208,7 +208,35 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
 
   return (
     <AnimatingProvider value={animatingCtx}>
-      <div className="relative w-full h-full p-8 border-cell border-line box-border">
+      <div
+        className="relative w-full h-full box-border"
+        style={{ padding: 'clamp(24px, 4vmin, 64px)' }}
+      >
+        {/* Meta-grid extension lines: four 1px dark lines that abut the 9×9's
+            outer frame and run all the way to the viewport edges, so the 9×9
+            reads as the center cell of a larger grid that continues offscreen.
+            Sits behind the grid wrapper so the grid's own dark frame paints on
+            top at the corners. */}
+        <div
+          aria-hidden
+          className="absolute left-0 right-0 h-px bg-[#5d5d5d] pointer-events-none"
+          style={{ top: 'clamp(24px, 4vmin, 64px)' }}
+        />
+        <div
+          aria-hidden
+          className="absolute left-0 right-0 h-px bg-[#5d5d5d] pointer-events-none"
+          style={{ bottom: 'clamp(24px, 4vmin, 64px)' }}
+        />
+        <div
+          aria-hidden
+          className="absolute top-0 bottom-0 w-px bg-[#5d5d5d] pointer-events-none"
+          style={{ left: 'clamp(24px, 4vmin, 64px)' }}
+        />
+        <div
+          aria-hidden
+          className="absolute top-0 bottom-0 w-px bg-[#5d5d5d] pointer-events-none"
+          style={{ right: 'clamp(24px, 4vmin, 64px)' }}
+        />
         <div ref={wrapperRef} className="relative w-full h-full">
           {oldSnap && (
             <div ref={oldLayerRef} className="absolute inset-0 pointer-events-none">
