@@ -7,7 +7,7 @@ module.exports = {
       paper: '#ffffff',
       'fill-secondary': '#fcfcfc',
       'fill-tertiary': '#f7f7f7',
-      'fill-page': '#f2f2f2',
+      'fill-page': '#f4f4f4',
       ink: '#111111',
       'ink-mut': '#c8c8c8',
       'ink-faint': 'rgba(17,17,17,0.18)',

@@ -31,7 +31,7 @@ const tierTypePlain: Record<Tier, string> = {
   tertiary: 'text-tertiary font-tertiary text-ink-mut',
 };
 
-const compactSecondaryTypePlain = 'text-tertiary font-secondary text-ink';
+const compactSecondaryTypePlain = 'text-tertiary font-secondary text-ink-mut';
 
 // Display-mode color classes only — fontFamily is set inline from the active
 // typeface, and font-size + weight are owned by the fit hook.
@@ -95,7 +95,9 @@ const padding = 'p-4';
   const fill = tierFill[tier];
 
   const type = display
-    ? tierColorDisplay[tier]
+    ? compact && tier === 'secondary'
+      ? 'text-ink-mut'
+      : tierColorDisplay[tier]
     : compact && tier === 'secondary'
       ? compactSecondaryTypePlain
       : tierTypePlain[tier];

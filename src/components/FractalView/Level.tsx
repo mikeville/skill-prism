@@ -113,18 +113,13 @@ export function Level({
     );
   }
 
-  // depth === 1: a 3×3 block of equal-size cells. Inner hairlines use a much
-  // fainter colour than the outer-block dividers (#e0e0e0) so the secondary
-  // grouping (perimeter outer blocks) reads more quietly than the primary
-  // grouping. `standalone` mode (mobile single-grid) adds the same faint
-  // frame; on desktop the outer wrapper paints dividers around it.
-  const wrapperClasses = standalone
-    ? 'grid gap-px w-full h-full bg-[#f4f4f4] border-cell border-[#f4f4f4] box-border overflow-hidden'
-    : 'grid gap-px w-full h-full bg-[#f4f4f4] overflow-hidden';
-
-  return (
+  // depth === 1: a 3×3 block of equal-size cells. Inner hairlines use the
+  // same fainter colour as the inner-block dividers (#f4f4f4); standalone
+  // mode (mobile single-grid) wraps in a dark frame matching desktop's outer
+  // 3×3 frame so mobile reads as a slice of the same visual system.
+  const innerGrid = (
     <div
-      className={wrapperClasses}
+      className="grid gap-px w-full h-full bg-[#f4f4f4] overflow-hidden"
       style={{ gridTemplateColumns: REST_TRACKS, gridTemplateRows: REST_TRACKS }}
     >
       {SLOTS.map((slot) => {
@@ -202,6 +197,15 @@ export function Level({
           />
         );
       })}
+    </div>
+  );
+
+  if (!standalone) return innerGrid;
+
+  // Mobile single-grid: dark outer frame matching desktop's outer-3×3 frame.
+  return (
+    <div className="bg-[#5d5d5d] p-px w-full h-full overflow-hidden">
+      {innerGrid}
     </div>
   );
 }
