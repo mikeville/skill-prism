@@ -9,17 +9,11 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadEnv, type Plugin } from 'vite';
-
-const PRICE_PER_MTOK: Record<string, { in: number; out: number }> = {
-  'claude-haiku-4-5-20251001': { in: 1.0, out: 5.0 },
-  'claude-sonnet-4-6': { in: 3.0, out: 15.0 },
-  'claude-opus-4-7': { in: 15.0, out: 75.0 },
-};
-
-type AnthropicMessage = {
-  content?: { type: string; text: string }[];
-  usage?: { input_tokens?: number; output_tokens?: number };
-};
+import {
+  buildUsageEntry,
+  formatUsageLine,
+  type AnthropicMessage,
+} from '../src/lib/anthropicPricing';
 
 export function apiCompleteProxy(): Plugin {
   let apiKey = '';
@@ -104,27 +98,8 @@ function jsonResponse(res: ServerResponse, statusCode: number, body: object) {
 }
 
 function logUsage(prompt: string, data: AnthropicMessage, model: string) {
-  const inTok = data.usage?.input_tokens ?? 0;
-  const outTok = data.usage?.output_tokens ?? 0;
-  const topicMatch = prompt.match(/The (?:topic|FOCUS) is "([^"]+)"/);
-  const topic = topicMatch ? topicMatch[1] : null;
-  const price = PRICE_PER_MTOK[model];
-  const costUsd = price ? (inTok * price.in + outTok * price.out) / 1_000_000 : null;
-
-  const entry = {
-    ts: new Date().toISOString(),
-    model,
-    topic,
-    input_tokens: inTok,
-    output_tokens: outTok,
-    estimated_cost_usd: costUsd === null ? null : Number(costUsd.toFixed(6)),
-  };
-
-  console.log(
-    `[usage] ${topic ?? '(no topic)'} · in=${inTok} out=${outTok}` +
-      (costUsd === null ? '' : ` · ~$${costUsd.toFixed(5)}`),
-  );
-
+  const entry = buildUsageEntry(prompt, data, model);
+  console.log(formatUsageLine(entry));
   appendFile(join(process.cwd(), 'usage.jsonl'), JSON.stringify(entry) + '\n').catch((e) =>
     console.error('usage log write failed:', e),
   );

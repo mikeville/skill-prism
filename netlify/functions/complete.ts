@@ -1,48 +1,24 @@
 // Netlify Function — proxies /api/complete to Anthropic.
 // Runs in dev (via `netlify dev`) and in production. The function holds the API key;
-// browsers never see it. Same logic as the prototype's server.mjs.
+// browsers never see it.
 
 import type { Handler } from '@netlify/functions';
 import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import {
+  buildUsageEntry,
+  formatUsageLine,
+  type AnthropicMessage,
+} from '../../src/lib/anthropicPricing';
 
 const API_KEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 
-// Rough estimate only. Canonical billing lives in the Anthropic console.
-const PRICE_PER_MTOK: Record<string, { in: number; out: number }> = {
-  'claude-haiku-4-5-20251001': { in: 1.0, out: 5.0 },
-  'claude-sonnet-4-6': { in: 3.0, out: 15.0 },
-  'claude-opus-4-7': { in: 15.0, out: 75.0 },
-};
-
-type AnthropicMessage = {
-  content?: { type: string; text: string }[];
-  usage?: { input_tokens?: number; output_tokens?: number };
-};
-
 function logUsage(prompt: string, data: AnthropicMessage) {
-  const inTok = data.usage?.input_tokens ?? 0;
-  const outTok = data.usage?.output_tokens ?? 0;
-  const topicMatch = prompt.match(/The (?:topic|FOCUS) is "([^"]+)"/);
-  const topic = topicMatch ? topicMatch[1] : null;
-  const price = PRICE_PER_MTOK[MODEL];
-  const costUsd = price ? (inTok * price.in + outTok * price.out) / 1_000_000 : null;
-
-  const entry = {
-    ts: new Date().toISOString(),
-    model: MODEL,
-    topic,
-    input_tokens: inTok,
-    output_tokens: outTok,
-    estimated_cost_usd: costUsd === null ? null : Number(costUsd.toFixed(6)),
-  };
+  const entry = buildUsageEntry(prompt, data, MODEL);
 
   // Always log: in prod this lands in Netlify function logs (queryable), in dev in the terminal.
-  console.log(
-    `[usage] ${topic ?? '(no topic)'} · in=${inTok} out=${outTok}` +
-      (costUsd === null ? '' : ` · ~$${costUsd.toFixed(5)}`),
-  );
+  console.log(formatUsageLine(entry));
   console.log(JSON.stringify(entry));
 
   // Append to usage.jsonl only when running locally via `netlify dev`.
