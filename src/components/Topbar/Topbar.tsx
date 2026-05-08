@@ -7,37 +7,34 @@ type Props = {
   onJump: (idx: number) => void;
   onReset: () => void;
   regenerating: boolean;
-  canOpenSkill: boolean;
-  skillOpen: boolean;
-  onToggleSkill: () => void;
 };
 
-export function Topbar({
-  path,
-  onJump,
-  onReset,
-  regenerating,
-  canOpenSkill,
-  skillOpen,
-  onToggleSkill,
-}: Props) {
+export function Topbar({ path, onJump, onReset, regenerating }: Props) {
   const { mode, toggle } = useTypeMode();
   const poster = mode === 'poster';
+  const showCrumbs = path.length >= 2;
 
   return (
     <div
-      className="flex items-center gap-6 px-8 shrink-0"
-      style={{ height: 'clamp(48px, 6vmin, 72px)' }}
+      className="grid items-center shrink-0"
+      style={{
+        height: 'clamp(48px, 6vmin, 72px)',
+        gridTemplateColumns: '1fr auto 1fr',
+        paddingLeft: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
+        paddingRight: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
+      }}
     >
       <button
         type="button"
         onClick={onReset}
-        className="text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover"
+        className="text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover justify-self-start"
       >
-        Ohtani
+        Skill Explorer
       </button>
-      <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />
-      <div className="ml-auto flex items-center gap-2">
+      <div className="justify-self-center min-w-0">
+        {showCrumbs && <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />}
+      </div>
+      <div className="justify-self-end flex items-center gap-2">
         <button
           type="button"
           onClick={toggle}
@@ -59,19 +56,6 @@ export function Topbar({
           Aa
         </button>
       </div>
-      {canOpenSkill && (
-        <button
-          type="button"
-          onClick={onToggleSkill}
-          aria-pressed={skillOpen}
-          className={[
-            'text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
-            skillOpen ? 'border-cell border-line px-2 py-0.5' : '',
-          ].join(' ')}
-        >
-          {skillOpen ? 'Skill draft ✕' : 'Skill draft ▸'}
-        </button>
-      )}
     </div>
   );
 }

@@ -4,14 +4,15 @@ module.exports = {
   theme: {
     colors: {
       transparent: 'transparent',
-      paper: '#ffffff',
+      paper: 'var(--c-paper)',
       'fill-secondary': '#fcfcfc',
       'fill-tertiary': '#f7f7f7',
-      'fill-page': '#f4f4f4',
-      ink: '#111111',
-      'ink-mut': '#c8c8c8',
-      'ink-faint': 'rgba(17,17,17,0.18)',
-      line: '#ffffff',
+      'fill-page': 'var(--c-fill-page)',
+      ink: 'var(--c-ink)',
+      'ink-mut': 'var(--c-ink-mut)',
+      'ink-faint': 'var(--c-ink-faint)',
+      line: 'var(--c-paper)',
+      'line-meta': 'var(--c-line-meta)',
     },
     fontFamily: {
       // Anybody is the only font in use across the app — same family for body

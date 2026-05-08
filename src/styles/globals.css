@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --c-ink: #111111;
+    --c-ink-mut: #c8c8c8;
+    --c-ink-faint: rgba(17, 17, 17, 0.18);
+    --c-paper: #ffffff;
+    --c-fill-page: #f4f4f4;
+    --c-line-meta: #5d5d5d;
+  }
   html,
   body,
   #root {

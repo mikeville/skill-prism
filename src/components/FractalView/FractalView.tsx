@@ -211,40 +211,12 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
       <div
         className="relative w-full h-full box-border"
         style={{
-          // The Topbar above acts as the top meta-cell zone, so FractalView
-          // has no top padding — the 9×9's top frame sits flush against the
-          // bottom of the Topbar. Bottom matches the Topbar height for a
-          // visually balanced top/bottom; sides are tighter.
           paddingTop: 0,
           paddingBottom: 'clamp(48px, 6vmin, 72px)',
-          paddingLeft: 'clamp(24px, 4vmin, 48px)',
-          paddingRight: 'clamp(24px, 4vmin, 48px)',
+          paddingLeft: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1))',
+          paddingRight: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1))',
         }}
       >
-        {/* Meta-grid extension lines: four 1px dark lines that abut the 9×9's
-            outer frame and run all the way to the viewport edges, so the 9×9
-            reads as the center cell of a larger grid that continues offscreen.
-            The top line sits at FractalView's top: 0 (= the bottom of the
-            Topbar zone, which is where the top of the 9×9 begins). */}
-        <div
-          aria-hidden
-          className="absolute left-0 right-0 top-0 h-px bg-[#5d5d5d] pointer-events-none"
-        />
-        <div
-          aria-hidden
-          className="absolute left-0 right-0 h-px bg-[#5d5d5d] pointer-events-none"
-          style={{ bottom: 'clamp(48px, 6vmin, 72px)' }}
-        />
-        <div
-          aria-hidden
-          className="absolute top-0 bottom-0 w-px bg-[#5d5d5d] pointer-events-none"
-          style={{ left: 'clamp(24px, 4vmin, 48px)' }}
-        />
-        <div
-          aria-hidden
-          className="absolute top-0 bottom-0 w-px bg-[#5d5d5d] pointer-events-none"
-          style={{ right: 'clamp(24px, 4vmin, 48px)' }}
-        />
         <div ref={wrapperRef} className="relative w-full h-full">
           {oldSnap && (
             <div ref={oldLayerRef} className="absolute inset-0 pointer-events-none">
