@@ -10,15 +10,11 @@ export type CellClick =
   | { kind: 'secondary'; mainIdx: number; originBlockSlot?: number }
   | { kind: 'tertiary'; mainIdx: number; subIdx: number; originBlockSlot?: number };
 
-export type CellRefKey = { mainIdx: number; subIdx?: number };
-
 type LevelProps = {
   node: FractalNode;
   depth: 1 | 2;
-  tier: 'primary' | 'secondary';
   loading: boolean;
   onCellClick: (c: CellClick) => void;
-  registerCell?: (key: CellRefKey, el: HTMLDivElement | null) => void;
   trail?: { mainIdx: number };
   // standalone=true → this depth=1 grid renders its own dark frame (mobile single-grid).
   // standalone=false → it sits inside a depth=2 outer wrapper that already paints the dark gaps + frame.
@@ -51,10 +47,8 @@ function trackTemplate(focusedIdx: number): string {
 export function Level({
   node,
   depth,
-  tier,
   loading,
   onCellClick,
-  registerCell,
   trail,
   standalone = true,
   focusSlot,
@@ -99,10 +93,8 @@ export function Level({
               key={slot}
               node={child ?? { term: '', children: undefined }}
               depth={1}
-              tier="secondary"
               loading={loading}
               onCellClick={onCellClick}
-              registerCell={registerCell}
               trail={{ mainIdx: childIdx }}
               standalone={false}
               outerBlockSlot={slot}
@@ -147,13 +139,12 @@ export function Level({
                 state={state}
                 content={term}
                 onClick={click}
-                cellRef={(el) => registerCell?.({ mainIdx: trail.mainIdx }, el)}
               />
             );
           }
 
           // Center of the center block (or mobile standalone) — the focal topic.
-          return <Cell key={slot} tier={tier} state={state} content={term} />;
+          return <Cell key={slot} tier="primary" state={state} content={term} />;
         }
 
         // Surrounding slot. childIdx 0..7, skipping the center slot.
@@ -165,9 +156,6 @@ export function Level({
         const childTier: Tier = trail != null ? 'tertiary' : 'secondary';
         // Center-3x3 secondaries get compact (tertiary-sized) type, keeping ink color.
         const compact = trail == null;
-
-        const refKey: CellRefKey =
-          trail != null ? { mainIdx: trail.mainIdx, subIdx: childIdx } : { mainIdx: childIdx };
 
         const click =
           trail != null
@@ -192,7 +180,6 @@ export function Level({
             state={state}
             content={term}
             onClick={state === 'content' ? click : undefined}
-            cellRef={(el) => registerCell?.(refKey, el)}
             compact={compact}
           />
         );

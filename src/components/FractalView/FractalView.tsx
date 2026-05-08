@@ -33,7 +33,6 @@ const SWAP_FROM = 0.46; // opacity cross-fade window (fraction of ANIM_MS)
 const SWAP_TO = 0.54;
 
 export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalViewProps) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const newLayerRef = useRef<HTMLDivElement>(null);
   const oldLayerRef = useRef<HTMLDivElement>(null);
   const newGridRef = useRef<HTMLDivElement>(null);
@@ -217,13 +216,12 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
           paddingRight: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1))',
         }}
       >
-        <div ref={wrapperRef} className="relative w-full h-full">
+        <div className="relative w-full h-full">
           {oldSnap && (
             <div ref={oldLayerRef} className="absolute inset-0 pointer-events-none">
               <Level
                 node={oldSnap.tree}
                 depth={oldSnap.depth}
-                tier="primary"
                 loading={oldSnap.loading}
                 onCellClick={() => {}}
                 focusSlot={oldSnap.oldZoom.from}
@@ -235,7 +233,6 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
             <Level
               node={newTree}
               depth={depth}
-              tier="primary"
               loading={newLoading}
               onCellClick={handleCellClick}
               focusSlot={oldSnap?.newZoom.from ?? null}

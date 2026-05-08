@@ -57,7 +57,6 @@ export function useFitText<T extends HTMLElement>(opts: Options) {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tier, enabled, animating, ...deps]);
 
   return ref;

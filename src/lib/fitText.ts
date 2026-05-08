@@ -368,7 +368,7 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
   // Step 1: max wdth/wght at targetSize.
   applyAxes(el, targetSize, wMax, gMax);
   if (fitsW()) {
-    applyTracking(el, cellW, targetSize);
+    applyTracking(el, cellW);
     return;
   }
 
@@ -379,7 +379,7 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
   });
   applyAxes(el, targetSize, wdth, gMax);
   if (fitsW()) {
-    applyTracking(el, cellW, targetSize);
+    applyTracking(el, cellW);
     return;
   }
 
@@ -390,7 +390,7 @@ function fitLine(el: HTMLElement, cellW: number, allottedH: number, preset: FitP
   });
   applyAxes(el, targetSize, wMin, wght);
   if (fitsW()) {
-    applyTracking(el, cellW, targetSize);
+    applyTracking(el, cellW);
     return;
   }
 
@@ -430,7 +430,7 @@ function naturalTextWidth(el: HTMLElement): number {
   return rect.width;
 }
 
-function applyTracking(el: HTMLElement, cellW: number, _targetSize: number) {
+function applyTracking(el: HTMLElement, cellW: number) {
   const charCount = (el.textContent || '').length;
   if (charCount < 2) return;
   const naturalW = naturalTextWidth(el);

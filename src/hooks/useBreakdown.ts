@@ -58,7 +58,6 @@ export function useBreakdown(path: string[]): UseBreakdownResult {
         if (reqIdRef.current === reqId) setRegenerating(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(path)]);
   // ^ Stringified key — path is a new array each render but the cache is keyed by content,
   //   so we want the effect to re-run only when the *content* of the path changes.

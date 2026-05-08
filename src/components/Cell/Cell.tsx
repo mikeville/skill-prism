@@ -12,7 +12,6 @@ type CellProps = {
   content?: string;
   onClick?: () => void;
   children?: ReactNode;
-  cellRef?: (el: HTMLDivElement | null) => void;
   // compact secondaries (the 8 in the center 3x3) keep the dark ink color but borrow tertiary's smaller type size.
   compact?: boolean;
 };
@@ -48,7 +47,7 @@ function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
   return tier;
 }
 
-export function Cell({ tier, state, content, onClick, children, cellRef, compact }: CellProps) {
+export function Cell({ tier, state, content, onClick, children, compact }: CellProps) {
   const { mode } = useTypeMode();
   const font = ANYBODY;
   const poster = mode === 'poster';
@@ -56,14 +55,10 @@ export function Cell({ tier, state, content, onClick, children, cellRef, compact
 
   // Track cell dimensions so splitLines can break long words contextually —
   // PERIODIZATION stays intact in a wide cell but breaks in a narrow one.
-  const internalCellRef = useRef<HTMLDivElement | null>(null);
+  const cellRef = useRef<HTMLDivElement | null>(null);
   const [cellSize, setCellSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
-  const handleCellRef = (el: HTMLDivElement | null) => {
-    internalCellRef.current = el;
-    cellRef?.(el);
-  };
   useEffect(() => {
-    const el = internalCellRef.current;
+    const el = cellRef.current;
     if (!el) return;
     const update = () => setCellSize({ w: el.clientWidth, h: el.clientHeight });
     update();
@@ -105,7 +100,7 @@ const padding = 'p-4';
 
   return (
     <div
-      ref={handleCellRef}
+      ref={cellRef}
       onClick={clickable ? onClick : undefined}
       className={`${base} ${fill} ${type} ${hover}`.trim()}
     >
