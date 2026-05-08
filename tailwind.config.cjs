@@ -5,8 +5,6 @@ module.exports = {
     colors: {
       transparent: 'transparent',
       paper: 'var(--c-paper)',
-      'fill-secondary': '#fcfcfc',
-      'fill-tertiary': '#f7f7f7',
       'fill-page': 'var(--c-fill-page)',
       ink: 'var(--c-ink)',
       'ink-mut': 'var(--c-ink-mut)',

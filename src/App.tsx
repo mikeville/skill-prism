@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { ColorPicker } from './components/ColorPicker/ColorPicker';
 import { EmptyState } from './components/EmptyState/EmptyState';
 import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
@@ -124,7 +123,6 @@ function AppInner() {
           </div>
         </div>
       )}
-      <ColorPicker />
     </div>
   );
 }

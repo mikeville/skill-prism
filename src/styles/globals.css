@@ -4,12 +4,15 @@
 
 @layer base {
   :root {
-    --c-ink: #111111;
-    --c-ink-mut: #c8c8c8;
-    --c-ink-faint: rgba(17, 17, 17, 0.18);
-    --c-paper: #ffffff;
-    --c-fill-page: #f4f4f4;
-    --c-line-meta: #5d5d5d;
+    /* The three knobs. Edit these. */
+    --c-ink: #d51010;
+    --c-ink-mut: #3faf93;
+    --c-paper: #ffe600;
+
+    /* Derived. Tweak the ratios, not the colors. */
+    --c-ink-faint: color-mix(in srgb, var(--c-ink) 18%, transparent);
+    --c-fill-page: color-mix(in srgb, var(--c-ink) 0%, var(--c-paper));
+    --c-line-meta: color-mix(in srgb, var(--c-paper) 50%, var(--c-ink));
   }
   html,
   body,
