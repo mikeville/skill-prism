@@ -23,7 +23,7 @@ export function EmptyState({ onSubmit }: Props) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center text-ink px-4">
       <div className="absolute top-5 left-6 md:top-6 md:left-8 text-meta font-meta text-ink">
-        Ohtani <span className="text-ink-mut">· fractal topic browser</span>
+        Skill Prism <span className="text-ink-mut">· fractal topic browser</span>
       </div>
       <div className="absolute top-5 right-6 md:top-6 md:right-8 text-meta font-meta text-ink-mut">
         v0.1

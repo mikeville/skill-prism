@@ -17,7 +17,7 @@ name: ${name}
 description: TODO — write a triggering description. Use when the user asks about ${focal}.
 ---
 
-<!-- Generated from Ohtani. Path: ${ancestry} -->
+<!-- Generated from Skill Prism. Path: ${ancestry} -->
 
 # ${focal}
 

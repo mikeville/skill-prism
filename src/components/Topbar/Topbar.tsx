@@ -29,7 +29,7 @@ export function Topbar({ path, onJump, onReset, regenerating }: Props) {
         onClick={onReset}
         className="text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover justify-self-start"
       >
-        Skill Explorer
+        Skill Prism
       </button>
       <div className="justify-self-center min-w-0">
         {showCrumbs && <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />}

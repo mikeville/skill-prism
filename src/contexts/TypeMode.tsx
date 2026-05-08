@@ -9,7 +9,7 @@ type Ctx = {
 
 const TypeModeContext = createContext<Ctx | null>(null);
 
-const STORAGE_KEY = 'ohtani.typeMode';
+const STORAGE_KEY = 'skill-prism.typeMode';
 
 function readInitial(): TypeMode {
   if (typeof window === 'undefined') return 'poster';

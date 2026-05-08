@@ -8,7 +8,7 @@
 
 import type { Breakdown } from '../types';
 
-const PREFIX = 'ohtani:cache:v3:';
+const PREFIX = 'skill-prism:cache:v1:';
 
 export function pathKey(path: string[]): string {
   const last = path[path.length - 1] ?? '';

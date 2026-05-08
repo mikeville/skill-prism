@@ -1,4 +1,4 @@
-# Ohtani
+# Skill Prism
 
 A fractal topic browser. Type a topic → Claude returns a Harada-style 9×9
 decomposition. Click any cell to drill in.
@@ -79,7 +79,7 @@ _prototype/                     # original Babel-in-browser sketch (reference on
 ## Caching
 
 Per-user localStorage, keyed by the path JSON string with prefix
-`ohtani:cache:v1:`. To inspect: DevTools → Application → Local Storage. To
+`skill-prism:cache:v1:`. To inspect: DevTools → Application → Local Storage. To
 clear: `import { cacheClear } from './lib/cache'` then call it (or remove keys
 manually in DevTools).
 

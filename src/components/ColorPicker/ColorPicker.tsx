@@ -14,7 +14,7 @@ const DEFAULTS: Vars = {
   lineMeta: '#5d5d5d',
 };
 
-const STORAGE_KEY = 'ohtani:color-picker';
+const STORAGE_KEY = 'skill-prism:color-picker';
 
 const PRESETS: { name: string; vars: Vars }[] = [
   { name: 'Default', vars: DEFAULTS },
