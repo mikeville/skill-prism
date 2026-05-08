@@ -10,6 +10,11 @@ import { useContainerDepth } from './hooks/useContainerDepth';
 import { usePath } from './hooks/usePath';
 import { cacheGet } from './lib/cache';
 
+// TODO: dormant scaffolding — components/SkillSidebar/ and lib/exportSkill.ts
+// are implemented but not wired into the UI. Either wire them up (open the
+// sidebar from a Topbar button and feed it buildSkillMarkdown(path, data))
+// or delete them. Don't leave them indefinitely.
+
 export default function App() {
   return (
     <TypeModeProvider>
