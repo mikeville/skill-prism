@@ -1,15 +1,21 @@
 # Skill Prism
 
-A fractal topic browser. Type a topic → Claude returns a Harada-style 9×9
-decomposition. Click any cell to drill in.
+A fractal topic browser and learning tool. Type a topic, Claude returns a Harada-style 9×9 decomposition: 8 main sub-skills around the centre, 8 sub-sub-skills under each. Tap any cell to descend into it; the next decomposition takes its place. The URL hash tracks where you are, so every drill-down is a shareable link.
+
+## Typography notes
+
+- **One typeface (Anybody Variable) handles every label** through its variable axes. Each grid cell binary-searches `wdth → wght → fontSize` until the text fills the cell — flush left and right, flush top and bottom — then applies letter-spacing to soak up any remaining horizontal slack.
+- **Cap-to-baseline trim** (`text-box-trim: cap alphabetic`) snaps grid text against cell edges with no whitespace gap.
+- **Syllable-aware hyphenation** for long words. TeX patterns first; when the dictionary gives a lopsided result on a compound it doesn't know (e.g. `WEIGHTLIFT-ING`), a scoring fallback prefers natural English onsets and balanced midpoints (`WEIGHT-LIFTING`). Code lives in [src/lib/fitText.ts](src/lib/fitText.ts).
+- **Plain mode and poster mode** ship together — same content, different rhetorical register.
 
 ## Stack
 
 - Vite + React 18 + TypeScript
-- CSS Modules
+- Tailwind for utilities
 - Hash-routed paths (`#/segment-1/segment-2`) for shareable URLs and browser back/forward
-- Netlify Function for the `/api/complete` proxy
-- LocalStorage cache (per-user)
+- Netlify Function for the `/api/complete` proxy to the Anthropic API
+- LocalStorage cache (per-user, atomically versioned)
 
 ## Local development
 
@@ -18,63 +24,62 @@ Prereqs: Node 20+, an Anthropic API key.
 ```bash
 cp .env.example .env       # then paste your key
 npm install
-npm run dev                # netlify dev → Vite + the function on http://localhost:8888
+npm run dev                # Vite + inline /api/complete proxy on http://localhost:5173
 ```
 
-Press `?` anywhere outside an input to toggle the Tweaks panel.
-
-`npm run dev:vite` runs Vite alone (no `/api/complete` — the empty state will work but searches will 404).
+`npm run dev:netlify` runs the same app under `netlify dev` on port 8888 for full Netlify Functions parity. Day-to-day, plain `npm run dev` is faster and identical for everything except function-runtime quirks.
 
 ## Scripts
 
-|                     |                                                           |
-| ------------------- | --------------------------------------------------------- |
-| `npm run dev`       | Local dev via `netlify dev` (Vite + function). Port 8888. |
-| `npm run build`     | Type-check + Vite build → `dist/`.                        |
-| `npm run preview`   | Serve the built bundle.                                   |
-| `npm run typecheck` | `tsc --noEmit`.                                           |
-| `npm run format`    | Prettier write across the repo.                           |
+|                       |                                                          |
+| --------------------- | -------------------------------------------------------- |
+| `npm run dev`         | Vite + inline API proxy. Port 5173.                      |
+| `npm run dev:netlify` | Local dev under `netlify dev`. Port 8888.                |
+| `npm run build`       | Type-check + Vite build → `dist/`.                       |
+| `npm run preview`     | Serve the built bundle.                                  |
+| `npm run typecheck`   | `tsc --noEmit`.                                          |
+| `npm run format`      | Prettier write across the repo.                          |
 
 ## Project layout
 
 ```
 src/
-  App.tsx                       # root: navigation + tweaks UI
+  App.tsx                       # root: route → view selection
   main.tsx                      # ReactDOM mount
-  types.ts                      # CellStatus, Breakdown, Path, TweakValues
+  types.ts                      # CellStatus, Breakdown, Path
   components/
-    EmptyState.tsx              # landing input + examples
-    Breadcrumb.tsx              # path with PATH/regenerating
-    HaradaGrid.tsx              # 9×9 grid + GridCell + GridLines (one family)
-    tweaks/
-      TweaksPanel.tsx           # floating panel shell, draggable + dismissable
-      controls.tsx              # TweakSection/Slider/Radio/Select/Toggle/Color
+    EmptyState/                 # landing input + examples
+    Topbar/                     # breadcrumb + path controls
+    FractalView/                # 9×9 grid + zoom-from-cell animation
+    Cell/                       # cell rendering + multi-line fit hookup
+    SkillSidebar/               # dormant: future export-as-Claude-skill flow
   hooks/
     useBreakdown.ts             # cache lookup → API call → stale-request guard
     usePath.ts                  # window.location.hash ↔ string[]
-    useTweaks.ts                # localStorage-backed tweak values + FONT_STACKS
-    useTweaksPanelOpen.ts       # `?` keystroke gate, persisted
+    useContainerDepth.ts        # depth context for nested fractal levels
+    useFitText.ts               # imperative hook around fitText.ts
   lib/
     api.ts                      # POST /api/complete; returns Breakdown
-    cache.ts                    # localStorage cacheGet/cacheSet w/ v1 prefix
-    gridMapping.ts              # blockCellToRC, MAIN_TO_BLOCK, classifyCell
     prompt.ts                   # buildPrompt({ topic, path }) → string
+    cache.ts                    # localStorage cacheGet/cacheSet w/ v1 prefix
+    fitText.ts                  # multi-line cell fit + hyphenation scoring
+    fontConfig.ts               # active typeface + variable-axis presets
+    gridTracks.ts               # shared track templates (Level, FractalView)
+    anthropicPricing.ts         # list pricing for usage-log cost estimates
+    exportSkill.ts              # dormant: skill-markdown emitter
   styles/
-    globals.css                 # reset, font import, @keyframes
+    globals.css                 # reset, palette CSS vars, font import
 
 netlify/
   functions/
     complete.ts                 # /api/complete handler — dev + prod
 
-_prototype/                     # original Babel-in-browser sketch (reference only)
+vite-plugins/
+  api-complete.ts               # mirrors complete.ts inside the Vite dev server
+  tailwind-config-hmr.ts        # hot-reload tailwind.config.cjs edits
 ```
 
-## Deploy (Netlify)
-
-1. Connect the repo in the Netlify dashboard
-2. Set `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`) in **Site settings → Environment variables**
-3. Default model is `claude-haiku-4-5-20251001` (cheapest)
-4. Build command and publish dir come from `netlify.toml`
+`SkillSidebar` and `lib/exportSkill.ts` are intentionally dormant — scaffolding for a future "export this branch as a Claude skill" flow, signposted but not wired into the UI.
 
 ## Caching
 
@@ -83,30 +88,32 @@ Per-user localStorage, keyed by the path JSON string with prefix
 clear: `import { cacheClear } from './lib/cache'` then call it (or remove keys
 manually in DevTools).
 
-Bump the prefix in `src/lib/cache.ts` when the breakdown shape changes.
+Bump the prefix in `src/lib/cache.ts` when the breakdown shape changes — old
+data is then orphaned and ignored automatically.
 
 ## Usage logging
 
 The Netlify function logs every Anthropic call:
 
 - **Always** to stdout (visible in Netlify function logs in production)
-- **Only when running locally via `netlify dev`** also to `usage.jsonl` in the
-  project root
+- **Only when running locally via `netlify dev`** also to `usage.jsonl` in the project root
 
-Each line is JSON with `ts`, `model`, `topic`, `input_tokens`,
-`output_tokens`, and a rough `estimated_cost_usd`.
+Each line is JSON with `ts`, `model`, `topic`, `input_tokens`, `output_tokens`, and a rough `estimated_cost_usd`.
 
 ```bash
 # Total local spend so far:
 cat usage.jsonl | jq -s 'map(.estimated_cost_usd) | add'
 ```
 
-The estimate uses list pricing in `netlify/functions/complete.ts`; the
-canonical billing is in the Anthropic console.
+The estimate uses list pricing in [src/lib/anthropicPricing.ts](src/lib/anthropicPricing.ts), shared between the Netlify function and the Vite dev plugin. The canonical billing is in the Anthropic console.
 
-## Reference: the original prototype
+## Deploy (Netlify)
 
-The pre-migration prototype lives in `_prototype/`. It's a single-page sketch
-made in Claude Design — Babel-standalone, UMD React, JSX files loaded via
-`<script type="text/babel">`, and a Node proxy server. Kept for reference and
-visual comparison; not run directly.
+1. Connect the repo in the Netlify dashboard.
+2. Set `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`) in **Site settings → Environment variables**.
+3. Default model is `claude-haiku-4-5-20251001` (cheapest).
+4. Build command and publish dir come from `netlify.toml`.
+
+## License
+
+[MIT](LICENSE).

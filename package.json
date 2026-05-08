@@ -2,6 +2,24 @@
   "name": "skill-prism",
   "private": true,
   "version": "0.1.0",
+  "description": "A fractal topic browser. Type a topic; Claude returns a Harada-style 9×9 decomposition. Click any cell to drill in.",
+  "license": "MIT",
+  "author": "Mike Deal",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mikeville/skill-prism.git"
+  },
+  "homepage": "https://github.com/mikeville/skill-prism#readme",
+  "keywords": [
+    "claude",
+    "anthropic",
+    "harada",
+    "fractal",
+    "learning",
+    "vite",
+    "react",
+    "typography"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
