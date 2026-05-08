@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DataState } from '../../types';
 import { AnimatingProvider } from '../../contexts/Animating';
+import { colsForSlot, rowsForSlot } from '../../lib/gridTracks';
 import { Level, type CellClick, type FractalNode } from './Level';
 
 // ZoomIntent is set by App (via FractalView's click handler for zoom-in, or directly for
@@ -140,16 +141,28 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
 
     const oldGridAnim = oldGrid.animate(
       [
-        { gridTemplateColumns: cols(oldZoom.from), gridTemplateRows: rows(oldZoom.from) },
-        { gridTemplateColumns: cols(oldZoom.to), gridTemplateRows: rows(oldZoom.to) },
+        {
+          gridTemplateColumns: colsForSlot(oldZoom.from),
+          gridTemplateRows: rowsForSlot(oldZoom.from),
+        },
+        {
+          gridTemplateColumns: colsForSlot(oldZoom.to),
+          gridTemplateRows: rowsForSlot(oldZoom.to),
+        },
       ],
       { duration: PHASE_MS, easing: EASE, fill: 'forwards' },
     );
 
     const newGridAnim = newGrid.animate(
       [
-        { gridTemplateColumns: cols(newZoom.from), gridTemplateRows: rows(newZoom.from) },
-        { gridTemplateColumns: cols(newZoom.to), gridTemplateRows: rows(newZoom.to) },
+        {
+          gridTemplateColumns: colsForSlot(newZoom.from),
+          gridTemplateRows: rowsForSlot(newZoom.from),
+        },
+        {
+          gridTemplateColumns: colsForSlot(newZoom.to),
+          gridTemplateRows: rowsForSlot(newZoom.to),
+        },
       ],
       { duration: PHASE_MS, delay: PHASE_MS, easing: EASE, fill: 'forwards' },
     );
@@ -243,23 +256,6 @@ export function FractalView({ data, depth, onCellClick, zoomIntent }: FractalVie
       </div>
     </AnimatingProvider>
   );
-}
-
-// Rest template — uniform 3×3. The focal cell occupies the full center slot
-// (rendered directly without an inner grid) so it's already 3× larger than a
-// perimeter cell. Must match REST_TRACKS in Level.tsx.
-const REST = '1fr 1fr 1fr';
-
-function cols(slot: number | null): string {
-  if (slot == null) return REST;
-  const c = slot % 3;
-  return [0, 1, 2].map((i) => (i === c ? '1fr' : '0fr')).join(' ');
-}
-
-function rows(slot: number | null): string {
-  if (slot == null) return REST;
-  const r = Math.floor(slot / 3);
-  return [0, 1, 2].map((i) => (i === r ? '1fr' : '0fr')).join(' ');
 }
 
 function buildTree(data: DataState | null): FractalNode {

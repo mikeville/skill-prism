@@ -1,4 +1,5 @@
 import type { CellState, Tier } from '../../types';
+import { REST_TRACKS, trackTemplate } from '../../lib/gridTracks';
 import { Cell } from '../Cell/Cell';
 
 export type FractalNode = {
@@ -31,18 +32,6 @@ type LevelProps = {
 };
 
 const SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-
-// At rest, all three rows/columns are equal — every cell in a perimeter outer
-// block (and every cell in a depth-1 standalone grid) is the same size. The
-// center outer block at depth=2 is rendered as a single focal cell, so it's
-// 3× linearly larger than a perimeter cell while sharing the same outer-grid
-// slot. When zooming, "1fr 0fr 0fr" / "0fr 1fr 0fr" / "0fr 0fr 1fr" picks one
-// slot to fill; non-focused slots collapse to 0.
-export const REST_TRACKS = '1fr 1fr 1fr';
-
-function trackTemplate(focusedIdx: number): string {
-  return [0, 1, 2].map((i) => (i === focusedIdx ? '1fr' : '0fr')).join(' ');
-}
 
 export function Level({
   node,
