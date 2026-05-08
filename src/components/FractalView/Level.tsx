@@ -133,13 +133,7 @@ export function Level({
                     })
                 : undefined;
             return (
-              <Cell
-                key={slot}
-                tier="secondary"
-                state={state}
-                content={term}
-                onClick={click}
-              />
+              <Cell key={slot} tier="secondary" state={state} content={term} onClick={click} />
             );
           }
 
@@ -190,9 +184,5 @@ export function Level({
   if (!standalone) return innerGrid;
 
   // Mobile single-grid: dark outer frame matching desktop's outer-3×3 frame.
-  return (
-    <div className="bg-line-meta p-px w-full h-full overflow-hidden">
-      {innerGrid}
-    </div>
-  );
+  return <div className="bg-line-meta p-px w-full h-full overflow-hidden">{innerGrid}</div>;
 }

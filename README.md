@@ -27,13 +27,13 @@ Press `?` anywhere outside an input to toggle the Tweaks panel.
 
 ## Scripts
 
-| | |
-|---|---|
-| `npm run dev` | Local dev via `netlify dev` (Vite + function). Port 8888. |
-| `npm run build` | Type-check + Vite build → `dist/`. |
-| `npm run preview` | Serve the built bundle. |
-| `npm run typecheck` | `tsc --noEmit`. |
-| `npm run format` | Prettier write across the repo. |
+|                     |                                                           |
+| ------------------- | --------------------------------------------------------- |
+| `npm run dev`       | Local dev via `netlify dev` (Vite + function). Port 8888. |
+| `npm run build`     | Type-check + Vite build → `dist/`.                        |
+| `npm run preview`   | Serve the built bundle.                                   |
+| `npm run typecheck` | `tsc --noEmit`.                                           |
+| `npm run format`    | Prettier write across the repo.                           |
 
 ## Project layout
 

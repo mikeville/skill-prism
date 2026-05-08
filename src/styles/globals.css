@@ -24,7 +24,9 @@
   body {
     @apply bg-paper text-ink font-sans antialiased;
     text-rendering: geometricPrecision;
-    font-variation-settings: "wdth" 100, "wght" 450;
+    font-variation-settings:
+      'wdth' 100,
+      'wght' 450;
   }
   input::placeholder {
     @apply text-ink;

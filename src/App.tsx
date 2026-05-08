@@ -83,10 +83,7 @@ function AppInner() {
       {inEmpty ? (
         <EmptyState onSubmit={handleSubmit} />
       ) : (
-        <div
-          ref={gridContainerRef}
-          className="absolute inset-0 flex flex-col"
-        >
+        <div ref={gridContainerRef} className="absolute inset-0 flex flex-col">
           <div
             aria-hidden
             className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"

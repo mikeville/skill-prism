@@ -78,9 +78,34 @@ const LONG_PREFIX_LEN = 7; // and ≥ this many chars on the left means we shoul
 
 const COMMON_CONSONANT_CLUSTERS = new Set([
   // English word-initial consonant pairs that read naturally.
-  'br', 'bl', 'ch', 'cl', 'cr', 'dr', 'fl', 'fr', 'gl', 'gr',
-  'pl', 'pr', 'sc', 'sh', 'sk', 'sl', 'sm', 'sn', 'sp', 'st',
-  'sw', 'th', 'tr', 'tw', 'wh', 'wr', 'ph', 'qu',
+  'br',
+  'bl',
+  'ch',
+  'cl',
+  'cr',
+  'dr',
+  'fl',
+  'fr',
+  'gl',
+  'gr',
+  'pl',
+  'pr',
+  'sc',
+  'sh',
+  'sk',
+  'sl',
+  'sm',
+  'sn',
+  'sp',
+  'st',
+  'sw',
+  'th',
+  'tr',
+  'tw',
+  'wh',
+  'wr',
+  'ph',
+  'qu',
 ]);
 
 function isVowel(c: string): boolean {
@@ -276,10 +301,7 @@ function shouldBreak(
 }
 
 export function splitLines(text: string, cellW?: number, cellH?: number): string[] {
-  const tokens = text
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  const tokens = text.trim().split(/\s+/).filter(Boolean);
   // Estimate the line count we'd produce without breaks: each ≥3-char token
   // gets its own line, short tokens attach to neighbours.
   const longTokenCount = tokens.filter((t) => t.length > 2).length;

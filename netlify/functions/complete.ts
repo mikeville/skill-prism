@@ -60,7 +60,8 @@ export const handler: Handler = async (event) => {
   }
   if (!API_KEY) {
     return jsonResponse(500, {
-      error: 'Missing ANTHROPIC_API_KEY on the server. Set it in .env (dev) or Netlify env vars (prod).',
+      error:
+        'Missing ANTHROPIC_API_KEY on the server. Set it in .env (dev) or Netlify env vars (prod).',
     });
   }
 

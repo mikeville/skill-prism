@@ -30,8 +30,7 @@ const tierTypePlain: Record<Tier, string> = {
   tertiary: 'text-plain-other md:text-plain-other-md text-ink-mut',
 };
 
-const compactSecondaryTypePlain =
-  'text-plain-other md:text-plain-other-md text-ink-mut';
+const compactSecondaryTypePlain = 'text-plain-other md:text-plain-other-md text-ink-mut';
 
 // Poster-mode color classes only — fontFamily is set inline from the active
 // typeface, and font-size + weight are owned by the fit hook.
@@ -83,7 +82,7 @@ export function Cell({ tier, state, content, onClick, children, compact }: CellP
   // padding via getComputedStyle, so poster-mode text still sizes to fill the
   // inner area; tracking pushes the first/last char flush with the inner edge
   // rather than the cell border.
-const padding = 'p-4';
+  const padding = 'p-4';
   const base =
     `relative flex items-center justify-center text-center overflow-hidden ` +
     `transition-colors duration-hover w-full h-full ${padding}`;
@@ -123,7 +122,13 @@ const padding = 'p-4';
               const isFirst = i === 0;
               const isLast = i === lines.length - 1;
               const trim =
-                isFirst && isLast ? 'trim-both' : isFirst ? 'trim-start' : isLast ? 'trim-end' : 'none';
+                isFirst && isLast
+                  ? 'trim-both'
+                  : isFirst
+                    ? 'trim-start'
+                    : isLast
+                      ? 'trim-end'
+                      : 'none';
               return (
                 <span
                   key={i}
@@ -155,7 +160,13 @@ const padding = 'p-4';
               const isFirst = i === 0;
               const isLast = i === lines.length - 1;
               const trim =
-                isFirst && isLast ? 'trim-both' : isFirst ? 'trim-start' : isLast ? 'trim-end' : 'none';
+                isFirst && isLast
+                  ? 'trim-both'
+                  : isFirst
+                    ? 'trim-start'
+                    : isLast
+                      ? 'trim-end'
+                      : 'none';
               return (
                 <span
                   key={i}
