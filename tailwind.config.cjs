@@ -11,6 +11,7 @@ module.exports = {
       'ink-faint': 'var(--c-ink-faint)',
       line: 'var(--c-paper)',
       'line-meta': 'var(--c-line-meta)',
+      'line-cell': 'var(--c-line-cell)',
     },
     fontFamily: {
       // Anybody is the only font in use across the app — same family for body

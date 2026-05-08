@@ -100,7 +100,7 @@ export function Level({
   // 3×3 frame so mobile reads as a slice of the same visual system.
   const innerGrid = (
     <div
-      className="grid gap-px w-full h-full bg-fill-page overflow-hidden"
+      className="grid gap-px w-full h-full bg-line-cell overflow-hidden"
       style={{ gridTemplateColumns: REST_TRACKS, gridTemplateRows: REST_TRACKS }}
     >
       {SLOTS.map((slot) => {
