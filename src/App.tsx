@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EmptyState } from './components/EmptyState/EmptyState';
 import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
@@ -46,6 +46,22 @@ function AppInner() {
   const { ref: gridContainerRef, depth } = useContainerDepth();
   useViewportAspect();
   const zoomIntent = useRef<ZoomIntent | null>(null);
+  const prevPathLengthRef = useRef(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const inEmpty = path.length === 0;
+
+  // Detect transition from empty to non-empty
+  useEffect(() => {
+    if (prevPathLengthRef.current === 0 && path.length > 0) {
+      setIsTransitioning(true);
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+      }, 300); // match CSS transition duration
+      return () => clearTimeout(timer);
+    }
+    prevPathLengthRef.current = path.length;
+  }, [path]);
 
   const handleSubmit = (topic: string) => {
     zoomIntent.current = null;
@@ -76,14 +92,13 @@ function AppInner() {
     setPath([]);
   };
 
-  const inEmpty = path.length === 0;
-
   return (
     <div className="fixed inset-0 bg-fill-page text-ink overflow-hidden">
-      {inEmpty ? (
-        <EmptyState onSubmit={handleSubmit} />
-      ) : (
-        <div ref={gridContainerRef} className="absolute inset-0 flex flex-col">
+      {(inEmpty || isTransitioning) && (
+        <EmptyState onSubmit={handleSubmit} isAnimatingOut={isTransitioning} />
+      )}
+      {!inEmpty && (
+        <div ref={gridContainerRef} className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
           <div
             aria-hidden
             className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"

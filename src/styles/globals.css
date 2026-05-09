@@ -5,9 +5,9 @@
 @layer base {
   :root {
     /* The three knobs. Edit these. */
-    --c-ink: #d51010;
-    --c-ink-mut: #3faf93;
-    --c-paper: #ffe600;
+    --c-ink: #c6ff54;
+    --c-ink-mut: #876b16;
+    --c-paper: #4F3B1F;
 
     /* Derived. Tweak the ratios, not the colors. */
     --c-ink-faint: color-mix(in srgb, var(--c-ink) 18%, transparent);
@@ -25,6 +25,7 @@
   body {
     @apply bg-paper text-ink font-sans antialiased;
     text-rendering: geometricPrecision;
+    text-transform: uppercase;
     font-variation-settings:
       'wdth' 100,
       'wght' 450;

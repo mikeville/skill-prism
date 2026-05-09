@@ -1,27 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
-
-const EXAMPLES = ['linear algebra', 'the russian revolution', 'espresso extraction'] as const;
+import { selectRandomExamples } from '../../data/examples';
+import { useInputAnimation } from '../../hooks/useInputAnimation';
 
 type Props = {
   onSubmit: (topic: string) => void;
+  isAnimatingOut?: boolean;
 };
 
-export function EmptyState({ onSubmit }: Props) {
+export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
   const [val, setVal] = useState('');
+  const [examples, setExamples] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { wrapperRef, captureInitialPosition } = useInputAnimation();
 
   useEffect(() => {
+    setExamples(selectRandomExamples(3));
     inputRef.current?.focus();
   }, []);
 
   const submit = (v?: string) => {
     const t = (v ?? val).trim();
     if (!t) return;
+    captureInitialPosition();
     onSubmit(t);
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center text-ink px-4">
+    <div className={`absolute inset-0 flex flex-col items-center justify-center text-ink px-4 transition-opacity duration-300 ${isAnimatingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
       <div className="absolute top-5 left-6 md:top-6 md:left-8 text-meta font-meta text-ink">
         Skill Prism <span className="text-ink-mut">· fractal topic browser</span>
       </div>
@@ -30,7 +35,7 @@ export function EmptyState({ onSubmit }: Props) {
       </div>
 
       <div className="w-full max-w-[min(560px,92vw)]">
-        <div className="border-y-block border-ink py-3">
+        <div ref={wrapperRef} className="border border-cell bg-paper p-4 md:p-6">
           <input
             ref={inputRef}
             value={val}
@@ -45,7 +50,7 @@ export function EmptyState({ onSubmit }: Props) {
 
         <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta font-meta">
           <span className="text-ink-mut">try:</span>
-          {EXAMPLES.map((ex, i) => (
+          {examples.map((ex, i) => (
             <span key={ex}>
               <button
                 type="button"
@@ -54,7 +59,7 @@ export function EmptyState({ onSubmit }: Props) {
               >
                 {ex}
               </button>
-              {i < EXAMPLES.length - 1 && <span className="text-ink-mut mx-1">·</span>}
+              {i < examples.length - 1 && <span className="text-ink-mut mx-1">·</span>}
             </span>
           ))}
         </div>
