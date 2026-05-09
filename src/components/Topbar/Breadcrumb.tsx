@@ -31,7 +31,7 @@ export function Breadcrumb({ path, onJump, regenerating }: Props) {
       })}
       {regenerating && (
         <span className="text-meta text-ink-mut flex items-center gap-1 ml-2">
-          <Pulse /> regenerating
+          <Pulse /> REGENERATING
         </span>
       )}
     </div>

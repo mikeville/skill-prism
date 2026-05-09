@@ -300,16 +300,64 @@ function shouldBreak(
   return false;
 }
 
-export function splitLines(text: string, cellW?: number, cellH?: number): string[] {
+// Plain-mode axes — must match Cell.tsx's plain-mode font-variation-settings
+// so the width prediction below corresponds to what's actually rendered.
+export const PLAIN_AXES = { wdth: 100, wght: 500 } as const;
+
+// Plain-mode break decision. The poster heuristic compares predicted intact
+// vs broken FILL because poster scales font size to fit; in plain mode the
+// font is fixed, so the question reduces to: does the intact token actually
+// fit at the rendered font size? If yes, leave it; if no, hyphenate.
+//
+// Threshold is lower than poster's ABSOLUTE_OK_THRESHOLD because plain has
+// no font-shrink fallback — a 7-char word in a cell that fits 6 chars must
+// break or it'll clip. Below 6 chars we leave intact even on overflow: the
+// hyphenation produces uglier results than a small clip at that length.
+//
+// The 10% slack stops words that overflow by ~a single character (SCALES
+// in a 44px cell at 12px) from being broken into "SCA-LES" — that 1-2px of
+// edge clipping under overflow:hidden is far less ugly than a 3+3 hyphen.
+const PLAIN_MIN_BREAK_LEN = 6;
+const PLAIN_OVERFLOW_SLACK = 1.1;
+function shouldBreakPlain(
+  token: string,
+  cellW: number | undefined,
+  plainFontSize: number | undefined,
+): boolean {
+  const len = token.length;
+  if (len < PLAIN_MIN_BREAK_LEN) return false;
+  if (!cellW || !plainFontSize || plainFontSize <= 0) return false;
+  const intactWidth = (probeWidth(token, PLAIN_AXES.wdth, PLAIN_AXES.wght) * plainFontSize) / PROBE_SIZE;
+  return intactWidth > cellW * PLAIN_OVERFLOW_SLACK;
+}
+
+export type SplitLinesOpts = {
+  // 'plain' uses a fixed-font-size break test; 'poster' (default) uses the
+  // fill-comparison heuristic that assumes the renderer can shrink the font.
+  mode?: 'plain' | 'poster';
+  // Required when mode === 'plain'. The actual rendered px size on the cell
+  // (read from getComputedStyle so clamp()-based sizes resolve correctly).
+  plainFontSize?: number;
+};
+
+export function splitLines(
+  text: string,
+  cellW?: number,
+  cellH?: number,
+  opts: SplitLinesOpts = {},
+): string[] {
   const tokens = text.trim().split(/\s+/).filter(Boolean);
   // Estimate the line count we'd produce without breaks: each ≥3-char token
   // gets its own line, short tokens attach to neighbours.
   const longTokenCount = tokens.filter((t) => t.length > 2).length;
   const lineCount = Math.max(1, longTokenCount);
 
-  const broken = tokens
-    .map((t) => (shouldBreak(t, cellW, cellH, lineCount) ? breakLongToken(t) : t))
-    .join(' ');
+  const decide =
+    opts.mode === 'plain'
+      ? (t: string) => shouldBreakPlain(t, cellW, opts.plainFontSize)
+      : (t: string) => shouldBreak(t, cellW, cellH, lineCount);
+
+  const broken = tokens.map((t) => (decide(t) ? breakLongToken(t) : t)).join(' ');
   return broken
     .split('\n')
     .flatMap((segment) => groupShortTokens(segment.trim()))

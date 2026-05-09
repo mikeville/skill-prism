@@ -31,9 +31,9 @@ module.exports = {
       // primary cell is larger than every other cell. Sized so common
       // 9–11 char uppercase words fit at conventional weight/width.
       'plain-other': ['14px', { lineHeight: '0.9' }],
-      'plain-other-md': ['18px', { lineHeight: '0.9' }],
+      'plain-other-md': ['clamp(11px, 1.6vw, 18px)', { lineHeight: '0.9' }],
       'plain-primary': ['24px', { lineHeight: '0.9' }],
-      'plain-primary-md': ['44px', { lineHeight: '0.9' }],
+      'plain-primary-md': ['clamp(22px, 4.4vw, 44px)', { lineHeight: '0.9' }],
     },
     fontWeight: {
       regular: '400',

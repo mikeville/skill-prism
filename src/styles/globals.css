@@ -30,9 +30,18 @@
       'wdth' 100,
       'wght' 450;
   }
+  /* Browsers reset text-transform on form controls — re-inherit so the body's
+     uppercase rule reaches inputs, buttons, etc. */
+  button,
+  input,
+  textarea,
+  select {
+    text-transform: inherit;
+  }
   input::placeholder {
     @apply text-ink;
     opacity: 0.32;
+    text-transform: uppercase;
   }
   ::-webkit-scrollbar {
     display: none;

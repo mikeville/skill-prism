@@ -57,12 +57,25 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
 
   // Track cell dimensions so splitLines can break long words contextually —
   // PERIODIZATION stays intact in a wide cell but breaks in a narrow one.
+  // Also track the resolved plain-mode font size: it comes from clamp()-based
+  // Tailwind classes, so we read getComputedStyle to know the actual px value
+  // splitLines should compare token widths against in plain mode. We subtract
+  // padding from the dimensions so cellSize represents the actual text area
+  // (matches fitMultiline's convention for poster-mode width measurement).
   const cellRef = useRef<HTMLDivElement | null>(null);
   const [cellSize, setCellSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  const [plainFontSize, setPlainFontSize] = useState<number>(0);
   useEffect(() => {
     const el = cellRef.current;
     if (!el) return;
-    const update = () => setCellSize({ w: el.clientWidth, h: el.clientHeight });
+    const update = () => {
+      const cs = window.getComputedStyle(el);
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      setCellSize({ w: el.clientWidth - padX, h: el.clientHeight - padY });
+      const fs = parseFloat(cs.fontSize);
+      if (!Number.isNaN(fs)) setPlainFontSize(fs);
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -70,8 +83,14 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
   }, []);
 
   const lines = useMemo(
-    () => (content ? splitLines(content, cellSize.w || undefined, cellSize.h || undefined) : []),
-    [content, cellSize.w, cellSize.h],
+    () =>
+      content
+        ? splitLines(content, cellSize.w || undefined, cellSize.h || undefined, {
+            mode: poster ? 'poster' : 'plain',
+            plainFontSize: plainFontSize || undefined,
+          })
+        : [],
+    [content, cellSize.w, cellSize.h, poster, plainFontSize],
   );
   const linesKey = lines.join('\n');
 

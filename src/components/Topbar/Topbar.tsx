@@ -2,6 +2,14 @@ import { useTypeMode } from '../../contexts/TypeMode';
 import { ANYBODY } from '../../lib/fontConfig';
 import { Breadcrumb } from './Breadcrumb';
 
+// Tune the ABC mark here. Anybody axes: wdth [50–150], wght [100–900].
+const ABC_POSTER = [
+  { glyph: 'A', wdth: 150, wght: 900 }, // boldest + widest
+  { glyph: 'B', wdth: 125, wght: 600 }, // middle
+  { glyph: 'C', wdth:  100, wght: 300 }, // lightest + narrowest
+] as const;
+const ABC_PLAIN = { wdth: 100, wght: 500 } as const; // matches plain-mode cells
+
 type Props = {
   path: string[];
   onJump: (idx: number) => void;
@@ -27,9 +35,9 @@ export function Topbar({ path, onJump, onReset, regenerating }: Props) {
       <button
         type="button"
         onClick={onReset}
-        className="text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover justify-self-start"
+        className="text-meta font-meta text-ink hover:opacity-60 transition-opacity duration-hover justify-self-start"
       >
-        Skill Prism
+        SKILL PRISM
       </button>
       <div className="justify-self-center min-w-0">
         {showCrumbs && <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />}
@@ -39,21 +47,23 @@ export function Topbar({ path, onJump, onReset, regenerating }: Props) {
           type="button"
           onClick={toggle}
           aria-pressed={poster}
-          title={poster ? 'Switch to plain typography' : 'Switch to poster typography'}
-          className={[
-            'text-secondary text-ink hover:opacity-60 transition-opacity duration-hover',
-            'leading-none px-2 py-0.5 border-cell',
-            poster ? 'border-ink' : 'border-line',
-          ].join(' ')}
-          style={
-            poster
-              ? {
-                  fontVariationSettings: `"wdth" ${ANYBODY.aaPreview.wdth}, "wght" ${ANYBODY.aaPreview.wght}`,
-                }
-              : undefined
-          }
+          title={poster ? 'SWITCH TO PLAIN TYPOGRAPHY' : 'SWITCH TO POSTER TYPOGRAPHY'}
+          className="text-meta font-meta text-ink hover:opacity-60 transition-opacity duration-hover leading-none"
         >
-          Aa
+          {ABC_POSTER.map(({ glyph, wdth, wght }) => {
+            const axes = poster ? ABC_PLAIN : { wdth, wght };
+            return (
+              <span
+                key={glyph}
+                style={{
+                  fontFamily: ANYBODY.family,
+                  fontVariationSettings: `"wdth" ${axes.wdth}, "wght" ${axes.wght}`,
+                }}
+              >
+                {glyph}
+              </span>
+            );
+          })}
         </button>
       </div>
     </div>

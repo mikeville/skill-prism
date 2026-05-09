@@ -36,7 +36,7 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
       <div
         className={`absolute top-5 left-6 md:top-6 md:left-8 text-meta font-meta text-ink transition-opacity duration-200 ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}
       >
-        Skill Prism <span className="text-ink-mut">· fractal topic browser</span>
+        SKILL PRISM <span className="text-ink-mut">· FRACTAL TOPIC BROWSER</span>
       </div>
       <div
         className={`absolute top-5 right-6 md:top-6 md:right-8 text-meta font-meta text-ink-mut transition-opacity duration-200 ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}
@@ -48,7 +48,7 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
         <div style={{ width: dims.morphTargetWidth }}>
           <div
             ref={wrapperRef}
-            className="border border-cell bg-paper p-4 md:p-6"
+            className="border border-cell border-line-meta bg-paper p-4 md:p-6"
           >
             <input
               ref={inputRef}
@@ -57,13 +57,13 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') submit();
               }}
-              placeholder="what do you want to learn?"
+              placeholder="WHAT DO YOU WANT TO LEARN?"
               className="w-full bg-transparent border-0 outline-none text-input text-ink"
             />
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta font-meta">
-            <span className="text-ink-mut">try:</span>
+            <span className="text-ink-mut">TRY:</span>
             {examples.map((ex, i) => (
               <span key={ex}>
                 <button
@@ -83,9 +83,9 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
       <div
         className={`absolute bottom-5 left-6 md:bottom-6 md:left-8 text-meta font-meta text-ink-mut max-w-[360px] leading-relaxed transition-opacity duration-200 ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}
       >
-        Each cell decomposes further. Tap to descend.
+        EACH CELL DECOMPOSES FURTHER. TAP TO DESCEND.
         <br />
-        The path you take shapes what you see next.
+        THE PATH YOU TAKE SHAPES WHAT YOU SEE NEXT.
       </div>
     </div>
   );
