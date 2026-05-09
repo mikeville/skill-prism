@@ -29,6 +29,10 @@ type LevelProps = {
   // during recursion). Threads through into CellClick events so FractalView knows which 3x3
   // block to zoom into without doing a fragile DOM lookup.
   outerBlockSlot?: number;
+  // Callback ref attached to the morph target — the depth=2 primary cell on
+  // desktop, or the depth=1 standalone outer frame on mobile. App.tsx uses
+  // this to FLIP-animate from the empty-state input rect.
+  primaryRef?: (el: HTMLDivElement | null) => void;
 };
 
 const SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
@@ -43,6 +47,7 @@ export function Level({
   focusSlot,
   gridRef,
   outerBlockSlot,
+  primaryRef,
 }: LevelProps) {
   if (depth === 2) {
     // Outer 3x3. The 1px gap + 1px padding on bg-divider paints subtle group
@@ -72,7 +77,15 @@ export function Level({
             // redundant. Removing them here lets the focal grow 3× linearly.
             const term = node.term;
             const state: CellState = term ? 'content' : loading ? 'loading' : 'empty';
-            return <Cell key={slot} tier="primary" state={state} content={term} />;
+            return (
+              <Cell
+                key={slot}
+                tier="primary"
+                state={state}
+                content={term}
+                domRef={primaryRef}
+              />
+            );
           }
           // Surrounding block: a secondary at center, its tertiaries around.
           const childIdx = slot < 4 ? slot : slot - 1;
@@ -98,10 +111,16 @@ export function Level({
   // same fainter colour as the inner-block dividers (#f4f4f4); standalone
   // mode (mobile single-grid) wraps in a dark frame matching desktop's outer
   // 3×3 frame so mobile reads as a slice of the same visual system.
+  // Perimeter blocks (Level instances inside the outer 3×3) get data-perimeter
+  // so the empty→active morph can fade them in around the primary cell. The
+  // mobile standalone case (the entire grid) doesn't, since there's no
+  // perimeter — the standalone wrapper IS the morph target.
+  const isPerimeter = !standalone;
   const innerGrid = (
     <div
       className="grid gap-px w-full h-full bg-line-cell overflow-hidden"
       style={{ gridTemplateColumns: REST_TRACKS, gridTemplateRows: REST_TRACKS }}
+      data-perimeter={isPerimeter ? '' : undefined}
     >
       {SLOTS.map((slot) => {
         const isCenter = slot === 4;
@@ -173,5 +192,14 @@ export function Level({
   if (!standalone) return innerGrid;
 
   // Mobile single-grid: dark outer frame matching desktop's outer-3×3 frame.
-  return <div className="bg-line-meta p-px w-full h-full overflow-hidden">{innerGrid}</div>;
+  // This wrapper is the morph target on mobile (the empty-state input grows
+  // into this entire frame, then the inner 3×3 fades in inside it).
+  return (
+    <div
+      ref={primaryRef}
+      className="bg-line-meta p-px w-full h-full overflow-hidden"
+    >
+      {innerGrid}
+    </div>
+  );
 }

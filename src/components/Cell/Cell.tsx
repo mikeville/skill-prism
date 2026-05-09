@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CellState, Tier } from '../../types';
 import { Skeleton } from './Skeleton';
 import { useTypeMode } from '../../contexts/TypeMode';
@@ -14,6 +14,9 @@ type CellProps = {
   children?: ReactNode;
   // compact secondaries (the 8 in the center 3x3) keep the dark ink color but borrow tertiary's smaller type size.
   compact?: boolean;
+  // Callback ref attached to the cell's outer div. App.tsx uses this to grab
+  // the primary cell node for the empty→active morph (FLIP from input rect).
+  domRef?: (el: HTMLDivElement | null) => void;
 };
 
 // All tiers share the same paper fill — visual hierarchy is now carried
@@ -46,7 +49,7 @@ function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
   return tier;
 }
 
-export function Cell({ tier, state, content, onClick, children, compact }: CellProps) {
+export function Cell({ tier, state, content, onClick, children, compact, domRef }: CellProps) {
   const { mode } = useTypeMode();
   const font = ANYBODY;
   const poster = mode === 'poster';
@@ -97,9 +100,17 @@ export function Cell({ tier, state, content, onClick, children, compact }: CellP
       ? compactSecondaryTypePlain
       : tierTypePlain[tier];
 
+  const setRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      cellRef.current = el;
+      domRef?.(el);
+    },
+    [domRef],
+  );
+
   return (
     <div
-      ref={cellRef}
+      ref={setRef}
       onClick={clickable ? onClick : undefined}
       className={`${base} ${fill} ${type} ${hover}`.trim()}
     >
