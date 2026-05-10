@@ -15,6 +15,14 @@
     --c-line-meta: color-mix(in srgb, var(--c-paper) 50%, var(--c-ink));
     --c-line-cell: color-mix(in srgb, var(--c-ink-mut) 20%, var(--c-paper));
   }
+  /* Mobile: bypass the paper-mix and use ink-mut at full strength so the
+     hairlines read as proper rules rather than near-invisible separators on
+     the smaller, denser layout. Desktop keeps the faint mix. */
+  @media (max-width: 768px) {
+    :root {
+      --c-line-cell: var(--c-ink-mut);
+    }
+  }
   html,
   body,
   #root {

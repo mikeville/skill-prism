@@ -5,8 +5,8 @@ import { Breadcrumb } from './Breadcrumb';
 // Tune the ABC mark here. Anybody axes: wdth [50–150], wght [100–900].
 const ABC_POSTER = [
   { glyph: 'A', wdth: 150, wght: 900 }, // boldest + widest
-  { glyph: 'B', wdth: 125, wght: 600 }, // middle
-  { glyph: 'C', wdth:  100, wght: 300 }, // lightest + narrowest
+  { glyph: 'B', wdth: 125, wght: 700 }, // middle
+  { glyph: 'C', wdth:  100, wght: 500 }, // lightest + narrowest
 ] as const;
 const ABC_PLAIN = { wdth: 100, wght: 500 } as const; // matches plain-mode cells
 
@@ -35,7 +35,7 @@ export function Topbar({ path, onJump, onReset, regenerating }: Props) {
       <button
         type="button"
         onClick={onReset}
-        className="text-meta font-meta text-ink hover:opacity-60 transition-opacity duration-hover justify-self-start"
+        className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover justify-self-start"
       >
         SKILL PRISM
       </button>
@@ -48,7 +48,7 @@ export function Topbar({ path, onJump, onReset, regenerating }: Props) {
           onClick={toggle}
           aria-pressed={poster}
           title={poster ? 'SWITCH TO PLAIN TYPOGRAPHY' : 'SWITCH TO POSTER TYPOGRAPHY'}
-          className="text-meta font-meta text-ink hover:opacity-60 transition-opacity duration-hover leading-none"
+          className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover leading-none"
         >
           {ABC_POSTER.map(({ glyph, wdth, wght }) => {
             const axes = poster ? ABC_PLAIN : { wdth, wght };
