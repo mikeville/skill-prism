@@ -304,6 +304,13 @@ function shouldBreak(
 // so the width prediction below corresponds to what's actually rendered.
 export const PLAIN_AXES = { wdth: 100, wght: 500 } as const;
 
+// Public helper for callers that need the rendered text width at the actual
+// plain-mode font size (e.g. the primary-cell arrow overlay sizing its
+// exclusion circle to inscribe the text). Linear-scales the 100px probe.
+export function measurePlainTextWidth(text: string, fontSize: number): number {
+  return (probeWidth(text, PLAIN_AXES.wdth, PLAIN_AXES.wght) * fontSize) / PROBE_SIZE;
+}
+
 // Plain-mode break decision. The poster heuristic compares predicted intact
 // vs broken FILL because poster scales font size to fit; in plain mode the
 // font is fixed, so the question reduces to: does the intact token actually

@@ -3,7 +3,7 @@ import type { CellState, Tier } from '../../types';
 import { Skeleton } from './Skeleton';
 import { useTypeMode } from '../../contexts/TypeMode';
 import { useFitText } from '../../hooks/useFitText';
-import { splitLines, type FitTier } from '../../lib/fitText';
+import { measurePlainTextWidth, splitLines, type FitTier } from '../../lib/fitText';
 import { ANYBODY } from '../../lib/fontConfig';
 
 type CellProps = {
@@ -27,8 +27,12 @@ const tierFill: Record<Tier, string> = {
   tertiary: 'bg-paper',
 };
 
+// Plain-mode primary uses the same type size as every other cell. The focal
+// cell stands out via highlight colour on the surrounding outer block (and
+// breadcrumb context), not via scale — this dodges the long-word overflow
+// that a larger primary size produced at mobile widths.
 const tierTypePlain: Record<Tier, string> = {
-  primary: 'text-plain-primary md:text-plain-primary-md text-ink',
+  primary: 'text-plain-other md:text-plain-other-md text-ink',
   secondary: 'text-plain-other md:text-plain-other-md text-ink',
   tertiary: 'text-plain-other md:text-plain-other-md text-ink-mut',
 };
@@ -47,6 +51,128 @@ function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
   // Compact secondaries (center 3x3) use tertiary sizing in plain mode; mirror that here.
   if (tier === 'secondary' && compact) return 'tertiary';
   return tier;
+}
+
+// 8-arrow overlay rendered inside the plain-mode primary cell. Arrows radiate
+// from an exclusion *ellipse* shaped to the rendered text, outward to the 8
+// surrounding cells. Plain-mode-only.
+//
+// Why an ellipse (not a circle) for the exclusion zone: text is much wider
+// than tall, so a circle inscribing the text gave vertical arrows a huge gap
+// while horizontals/diagonals were tight. An ellipse with semi-axes matched
+// to the text's actual width/height yields a roughly uniform pad in every
+// direction. Stroke-linecap="butt" still gives each line a flat cap that's
+// perpendicular to the LINE itself (independent of the start curve), so the
+// inner termination reads as a clean right-angle cut.
+//
+// Pixel-coordinate SVG (not a percentage viewBox) so the arrowheads keep
+// their proportions and angles in any cell aspect.
+function PrimaryArrows({ lines, plainFontSize }: { lines: string[]; plainFontSize: number }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const { w, h } = size;
+
+  // Text bounding box in cell-px space. Width = widest line; height = lines
+  // stacked at the rendered line-height. measurePlainTextWidth probes the
+  // active font at the plain-mode axes so the result matches what's drawn.
+  let textW = 0;
+  let textH = 0;
+  if (plainFontSize > 0) {
+    for (const line of lines) {
+      const lw = measurePlainTextWidth(line, plainFontSize);
+      if (lw > textW) textW = lw;
+    }
+    textH = lines.length * plainFontSize * ANYBODY.lineHeight;
+  }
+
+  // Ellipse semi-axes: half-text-extent + a small breathing pad on each axis.
+  // Same pad horizontally and vertically, so the cardinal cap-to-glyph gap is
+  // identical up/down/left/right. Clamped so the ellipse never grows past the
+  // cell — keeps arrows visible even in tiny cells.
+  const cx = w / 2;
+  const cy = h / 2;
+  const m = 6; // cell-edge inset for the arrowhead tip
+  const pad = Math.max(6, plainFontSize * 0.6);
+  const maxAx = Math.max(0, w / 2 - m - 8);
+  const maxAy = Math.max(0, h / 2 - m - 8);
+  const ax = Math.min(textW / 2 + pad, maxAx);
+  const ay = Math.min(textH / 2 + pad, maxAy);
+
+  // Outer endpoints: cardinal arrows hit the mid-edge, diagonals hit the
+  // corner. Each arrow's start is the intersection of the ellipse with the
+  // ray from the cell centre toward its outer endpoint, found via the
+  // standard parametric ellipse-line intersection: t = 1/√((dx/ax)²+(dy/ay)²).
+  const outer: Array<[number, number]> = [
+    [cx, m],          // up
+    [cx, h - m],      // down
+    [m, cy],          // left
+    [w - m, cy],      // right
+    [m, m],           // up-left
+    [w - m, m],       // up-right
+    [m, h - m],       // down-left
+    [w - m, h - m],   // down-right
+  ];
+
+  const arrows = outer.map(([ox, oy]) => {
+    const dx = ox - cx;
+    const dy = oy - cy;
+    const t = ax > 0 && ay > 0
+      ? 1 / Math.hypot(dx / ax, dy / ay)
+      : 0;
+    return {
+      x1: cx + dx * t,
+      y1: cy + dy * t,
+      x2: ox,
+      y2: oy,
+    };
+  });
+
+  return (
+    <div ref={ref} className="absolute inset-0 pointer-events-none" aria-hidden>
+      {w > 0 && h > 0 && ax > 0 && ay > 0 && (
+        <svg width={w} height={h} className="block">
+          <defs>
+            <marker
+              id="primary-arrowhead"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+            </marker>
+          </defs>
+          {arrows.map((a, i) => (
+            <line
+              key={i}
+              x1={a.x1}
+              y1={a.y1}
+              x2={a.x2}
+              y2={a.y2}
+              stroke="currentColor"
+              strokeWidth={1.25}
+              strokeLinecap="butt"
+              markerEnd="url(#primary-arrowhead)"
+            />
+          ))}
+        </svg>
+      )}
+    </div>
+  );
 }
 
 export function Cell({ tier, state, content, onClick, children, compact, domRef }: CellProps) {
@@ -133,6 +259,9 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
       onClick={clickable ? onClick : undefined}
       className={`${base} ${fill} ${type} ${hover}`.trim()}
     >
+      {!poster && tier === 'primary' && state === 'content' && (
+        <PrimaryArrows lines={lines} plainFontSize={plainFontSize} />
+      )}
       {state === 'loading' ? (
         <Skeleton />
       ) : state === 'empty' ? (
