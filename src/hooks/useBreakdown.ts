@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { generateBreakdown } from '../lib/api';
 import { cacheGet, cacheSet } from '../lib/cache';
+import { logCacheHit } from '../lib/logEvent';
 import type { DataState } from '../types';
 
 export type UseBreakdownResult = {
@@ -35,6 +36,9 @@ export function useBreakdown(path: string[]): UseBreakdownResult {
       setData({ topic, mains: cached.mains, subs: cached.subs, loading: false });
       setRegenerating(false);
       setError(null);
+      // Fire-and-forget: log this cache hit to the server analytics layer
+      // so repeat drill-downs aren't invisible. Never blocks the UI.
+      logCacheHit(path);
       return;
     }
 

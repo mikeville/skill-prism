@@ -56,6 +56,29 @@ export async function getCachedBreakdown(
   return (data as DbBreakdown | null) ?? null;
 }
 
+// Like getCachedBreakdown but with no TTL filter — used by the log-event
+// endpoint to find ANY breakdown row matching the current model + path,
+// regardless of age, so localStorage cache hits can still be logged.
+export async function findBreakdown(
+  model: string,
+  path: string[],
+): Promise<DbBreakdown | null> {
+  if (!supabase || path.length === 0) return null;
+  const { data, error } = await supabase
+    .from('breakdowns')
+    .select('id, model, path, result, input_tokens, output_tokens, cost_usd, created_at')
+    .eq('model', model)
+    .eq('path_key', pathKey(path))
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error('[db] findBreakdown:', error.message);
+    return null;
+  }
+  return (data as DbBreakdown | null) ?? null;
+}
+
 export type InsertBreakdownInput = {
   model: string;
   path: string[];
