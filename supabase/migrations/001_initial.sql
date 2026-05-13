@@ -56,3 +56,12 @@ alter table public.breakdowns enable row level security;
 alter table public.searches   enable row level security;
 -- No policies => no rows visible to non-service roles. The service_role
 -- key used by Netlify Functions bypasses RLS by design.
+
+-- ----------------------------------------------------------------------
+-- Grants: service_role (used by Netlify Functions) needs explicit
+-- table-level privileges. If the Supabase project was created with
+-- "Automatically expose new tables" UNCHECKED, these grants don't happen
+-- by default, so we set them here explicitly.
+-- ----------------------------------------------------------------------
+grant all on public.breakdowns to service_role;
+grant all on public.searches   to service_role;
