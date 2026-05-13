@@ -1,19 +1,13 @@
-// Vite middleware that handles /api/complete in dev — same logic as
-// netlify/functions/complete.ts, but running inside Vite so dev doesn't need
-// `netlify dev` and gets sub-100ms HMR for everything (including the function
-// proxy itself, since this file is loaded by Vite).
+// Vite middleware that handles /api/complete in dev — delegates to the same
+// handleSearch pipeline as the Netlify function so cache/log behavior matches.
 //
 // Production unchanged: /api/complete is served by the Netlify Function.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { appendFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { loadEnv, type Plugin } from 'vite';
-import {
-  buildUsageEntry,
-  formatUsageLine,
-  type AnthropicMessage,
-} from '../src/lib/anthropicPricing';
+import type { AnthropicMessage } from '../src/lib/anthropicPricing';
+import { extractRequestMeta, handleSearch } from '../netlify/lib/handleSearch';
 
 export function apiCompleteProxy(): Plugin {
   let apiKey = '';
@@ -21,26 +15,32 @@ export function apiCompleteProxy(): Plugin {
 
   return {
     name: 'api-complete-dev-proxy',
-    apply: 'serve', // dev only — production uses the Netlify Function
+    apply: 'serve',
     configResolved(config) {
       const env = loadEnv(config.mode, config.root, '');
-      apiKey = env.ANTHROPIC_API_KEY ?? '';
-      model = env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
+      // Surface the Vite-loaded env vars to handleSearch / db.ts, which read
+      // process.env directly (they're shared with the Netlify function code).
+      for (const k of [
+        'ANTHROPIC_API_KEY',
+        'ANTHROPIC_MODEL',
+        'SUPABASE_URL',
+        'SUPABASE_SERVICE_KEY',
+        'ADMIN_TOKEN',
+        'CACHE_TTL_DAYS',
+      ]) {
+        if (env[k] && !process.env[k]) process.env[k] = env[k];
+      }
+      apiKey = process.env.ANTHROPIC_API_KEY ?? env.ANTHROPIC_API_KEY ?? '';
+      model = process.env.ANTHROPIC_MODEL || env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
     },
     configureServer(server) {
       server.middlewares.use('/api/complete', async (req, res) => {
-        if (req.method !== 'POST') {
-          return jsonResponse(res, 405, { error: 'Method not allowed' });
-        }
-        if (!apiKey) {
-          return jsonResponse(res, 500, {
-            error: 'Missing ANTHROPIC_API_KEY in .env',
-          });
-        }
+        if (req.method !== 'POST') return jsonResponse(res, 405, { error: 'Method not allowed' });
+        if (!apiKey) return jsonResponse(res, 500, { error: 'Missing ANTHROPIC_API_KEY in .env' });
 
-        let body: { prompt?: unknown };
+        let body: { prompt?: unknown; path?: unknown; session_id?: unknown };
         try {
-          body = JSON.parse(await readBody(req)) as { prompt?: unknown };
+          body = JSON.parse(await readBody(req)) as typeof body;
         } catch {
           return jsonResponse(res, 400, { error: 'Invalid JSON body' });
         }
@@ -48,31 +48,23 @@ export function apiCompleteProxy(): Plugin {
           return jsonResponse(res, 400, { error: 'Missing prompt' });
         }
         const prompt = body.prompt;
+        const path = Array.isArray(body.path)
+          ? body.path.map((p) => String(p ?? '')).filter(Boolean)
+          : [];
+        const session_id =
+          typeof body.session_id === 'string' && body.session_id ? body.session_id : randomUUID();
+
+        const meta = extractRequestMeta(req.headers);
 
         try {
-          const r = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              'x-api-key': apiKey,
-              'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-              model,
-              max_tokens: 4096,
-              messages: [{ role: 'user', content: prompt }],
-            }),
-          });
-          if (!r.ok) {
-            const text = await r.text();
-            return jsonResponse(res, r.status, { error: text });
-          }
-          const data = (await r.json()) as AnthropicMessage;
-          const completion = data.content?.[0]?.text ?? '';
-          logUsage(prompt, data, model);
-          return jsonResponse(res, 200, { completion });
+          const outcome = await handleSearch(
+            { prompt, path, session_id, ...meta },
+            (p) => callAnthropic(p, apiKey, model),
+            model,
+          );
+          return jsonResponse(res, outcome.status, outcome.body);
         } catch (e) {
-          console.error('[api/complete] error', e);
+          console.error('[/api/complete] error', e);
           return jsonResponse(res, 500, {
             error: e instanceof Error ? e.message : 'Server error',
           });
@@ -80,6 +72,28 @@ export function apiCompleteProxy(): Plugin {
       });
     },
   };
+}
+
+async function callAnthropic(
+  prompt: string,
+  apiKey: string,
+  model: string,
+): Promise<{ ok: true; data: AnthropicMessage } | { ok: false; status: number; text: string }> {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!r.ok) return { ok: false, status: r.status, text: await r.text() };
+  return { ok: true, data: (await r.json()) as AnthropicMessage };
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
@@ -95,12 +109,4 @@ function jsonResponse(res: ServerResponse, statusCode: number, body: object) {
   res.statusCode = statusCode;
   res.setHeader('content-type', 'application/json');
   res.end(JSON.stringify(body));
-}
-
-function logUsage(prompt: string, data: AnthropicMessage, model: string) {
-  const entry = buildUsageEntry(prompt, data, model);
-  console.log(formatUsageLine(entry));
-  appendFile(join(process.cwd(), 'usage.jsonl'), JSON.stringify(entry) + '\n').catch((e) =>
-    console.error('usage log write failed:', e),
-  );
 }

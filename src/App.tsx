@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react';
 import { EmptyState, type FirstRect } from './components/EmptyState/EmptyState';
 import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
@@ -15,7 +15,24 @@ import { cacheGet } from './lib/cache';
 // sidebar from a Topbar button and feed it buildSkillMarkdown(path, data))
 // or delete them. Don't leave them indefinitely.
 
+const AdminPage = lazy(() =>
+  import('./components/Admin/AdminPage').then((m) => ({ default: m.AdminPage })),
+);
+
 export default function App() {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-sm text-neutral-500">
+            Loading admin…
+          </div>
+        }
+      >
+        <AdminPage />
+      </Suspense>
+    );
+  }
   return (
     <TypeModeProvider>
       <AppInner />

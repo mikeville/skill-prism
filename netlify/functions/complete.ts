@@ -1,49 +1,28 @@
 // Netlify Function — proxies /api/complete to Anthropic.
 // Runs in dev (via `netlify dev`) and in production. The function holds the API key;
 // browsers never see it.
+//
+// The actual cache/log pipeline lives in netlify/lib/handleSearch.ts so the
+// same rules apply in `npm run dev` (Vite middleware) and prod (this file).
 
 import type { Handler } from '@netlify/functions';
-import { appendFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import {
-  buildUsageEntry,
-  formatUsageLine,
-  type AnthropicMessage,
-} from '../../src/lib/anthropicPricing';
+import type { AnthropicMessage } from '../../src/lib/anthropicPricing';
+import { extractRequestMeta, handleSearch } from '../lib/handleSearch';
 
 const API_KEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 
-function logUsage(prompt: string, data: AnthropicMessage) {
-  const entry = buildUsageEntry(prompt, data, MODEL);
-
-  // Always log: in prod this lands in Netlify function logs (queryable), in dev in the terminal.
-  console.log(formatUsageLine(entry));
-  console.log(JSON.stringify(entry));
-
-  // Append to usage.jsonl only when running locally via `netlify dev`.
-  // (Serverless filesystems are ephemeral; production logs live in the Netlify dashboard.)
-  if (process.env.CONTEXT === 'dev') {
-    appendFile(join(process.cwd(), 'usage.jsonl'), JSON.stringify(entry) + '\n').catch((e) =>
-      console.error('usage log write failed:', e),
-    );
-  }
-}
-
 export const handler: Handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return jsonResponse(405, { error: 'Method not allowed' });
-  }
+  if (event.httpMethod !== 'POST') return jsonResponse(405, { error: 'Method not allowed' });
   if (!API_KEY) {
     return jsonResponse(500, {
-      error:
-        'Missing ANTHROPIC_API_KEY on the server. Set it in .env (dev) or Netlify env vars (prod).',
+      error: 'Missing ANTHROPIC_API_KEY on the server. Set it in .env (dev) or Netlify env vars (prod).',
     });
   }
 
-  let body: { prompt?: unknown };
+  let body: { prompt?: unknown; path?: unknown; session_id?: unknown };
   try {
-    body = JSON.parse(event.body ?? '{}') as { prompt?: unknown };
+    body = JSON.parse(event.body ?? '{}') as typeof body;
   } catch {
     return jsonResponse(400, { error: 'Invalid JSON body' });
   }
@@ -51,34 +30,44 @@ export const handler: Handler = async (event) => {
     return jsonResponse(400, { error: 'Missing prompt' });
   }
   const prompt = body.prompt;
+  const path = Array.isArray(body.path) ? body.path.map((p) => String(p ?? '')).filter(Boolean) : [];
+  const session_id =
+    typeof body.session_id === 'string' && body.session_id ? body.session_id : crypto.randomUUID();
+
+  const meta = extractRequestMeta(event.headers as Record<string, string | undefined>);
 
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-    if (!r.ok) {
-      const text = await r.text();
-      return jsonResponse(r.status, { error: text });
-    }
-    const data = (await r.json()) as AnthropicMessage;
-    const completion = data.content?.[0]?.text ?? '';
-    logUsage(prompt, data);
-    return jsonResponse(200, { completion });
+    const outcome = await handleSearch(
+      { prompt, path, session_id, ...meta },
+      callAnthropic,
+      MODEL,
+    );
+    return jsonResponse(outcome.status, outcome.body);
   } catch (e) {
-    console.error('handler error', e);
+    console.error('[/api/complete] handler error', e);
     return jsonResponse(500, { error: e instanceof Error ? e.message : 'Server error' });
   }
 };
+
+async function callAnthropic(
+  prompt: string,
+): Promise<{ ok: true; data: AnthropicMessage } | { ok: false; status: number; text: string }> {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': API_KEY!,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!r.ok) return { ok: false, status: r.status, text: await r.text() };
+  return { ok: true, data: (await r.json()) as AnthropicMessage };
+}
 
 function jsonResponse(statusCode: number, body: object) {
   return {

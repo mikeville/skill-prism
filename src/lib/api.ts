@@ -1,5 +1,6 @@
 import type { Breakdown } from '../types';
 import { buildPrompt } from './prompt';
+import { getSessionId } from './session';
 
 export async function generateBreakdown({
   topic,
@@ -13,10 +14,14 @@ export async function generateBreakdown({
   const r = await fetch('/api/complete', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, path, session_id: getSessionId() }),
   });
 
-  const body = await r.json().catch(() => ({}) as { completion?: string; error?: string });
+  const body = (await r.json().catch(() => ({}))) as {
+    completion?: string;
+    cache_hit?: boolean;
+    error?: string;
+  };
   if (!r.ok || body.error) {
     throw new Error(body.error || `API error (${r.status})`);
   }

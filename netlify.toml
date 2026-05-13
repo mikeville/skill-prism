@@ -14,3 +14,14 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# SPA fallback for the admin dashboard (pathname-routed, not hash-routed).
+[[redirects]]
+  from = "/admin"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/index.html"
+  status = 200

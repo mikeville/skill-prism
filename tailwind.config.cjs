@@ -46,6 +46,39 @@ module.exports = {
       md: '769px',
     },
     extend: {
+      // Neutral palette + accents used by the /admin dashboard only.
+      // Kept here (rather than in theme.colors) so the home page palette
+      // (paper / ink / line-*) is untouched.
+      colors: {
+        white: '#ffffff',
+        black: '#000000',
+        neutral: {
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          900: '#171717',
+        },
+        red: {
+          50: '#fef2f2',
+          200: '#fecaca',
+          600: '#dc2626',
+          700: '#b91c1c',
+        },
+        green: {
+          100: '#dcfce7',
+          700: '#15803d',
+        },
+        orange: {
+          100: '#ffedd5',
+          700: '#c2410c',
+          800: '#9a3412',
+        },
+      },
       borderWidth: {
         cell: '1px',
         block: '2px',
