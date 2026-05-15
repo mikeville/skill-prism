@@ -10,6 +10,9 @@ import { tailwindConfigHmr } from './vite-plugins/tailwind-config-hmr';
 //   - tailwindConfigHmr makes tailwind.config.js edits hot-reload in ~100ms.
 // Prod: built dist/ is served by Netlify; /api/complete hits netlify/functions/complete.ts.
 export default defineConfig({
+  // Relative base so built asset URLs resolve correctly when the app is
+  // proxied at a sub-path (e.g. mikemake.com/skillprism/) as well as at root.
+  base: './',
   plugins: [react(), apiCompleteProxy(), apiLogEventProxy(), apiAdminProxy(), tailwindConfigHmr()],
   server: {
     port: 5173,

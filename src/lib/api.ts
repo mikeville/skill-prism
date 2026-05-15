@@ -11,7 +11,7 @@ export async function generateBreakdown({
 }): Promise<Breakdown> {
   const prompt = buildPrompt({ topic, path });
 
-  const r = await fetch('/api/complete', {
+  const r = await fetch('api/complete', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ prompt, path, session_id: getSessionId() }),

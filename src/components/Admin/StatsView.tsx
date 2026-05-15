@@ -35,7 +35,7 @@ export function StatsView() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch('/api/admin-stats?range=' + range)
+    fetch('api/admin-stats?range=' + range)
       .then((r) => r.json())
       .then((d: Stats & { error?: string }) => {
         if (d.error) throw new Error(d.error);

@@ -32,7 +32,7 @@ export function EventList() {
 
   useEffect(() => {
     setLoading(true);
-    fetch('/api/admin-events?limit=100')
+    fetch('api/admin-events?limit=100')
       .then((r) => r.json())
       .then((d: { events?: Event[]; error?: string }) => {
         if (d.error) throw new Error(d.error);

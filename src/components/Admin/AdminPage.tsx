@@ -15,7 +15,7 @@ export function AdminPage() {
   const [tab, setTab] = useState<Tab>('events');
 
   useEffect(() => {
-    fetch('/api/admin-me')
+    fetch('api/admin-me')
       .then((r) => r.json())
       .then((d: { authenticated?: boolean }) => setAuthed(Boolean(d?.authenticated)))
       .catch(() => setAuthed(false));

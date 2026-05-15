@@ -59,7 +59,7 @@ export function DrillDownTree() {
 
   useEffect(() => {
     setLoading(true);
-    fetch('/api/admin-sessions?limit=30')
+    fetch('api/admin-sessions?limit=30')
       .then((r) => r.json())
       .then((d: { sessions?: Session[]; error?: string }) => {
         if (d.error) throw new Error(d.error);

@@ -22,14 +22,14 @@ export function logCacheHit(path: string[]): void {
     try {
       // sendBeacon picks Content-Type from the Blob, so JSON-bodied beacons work.
       const blob = new Blob([payload], { type: 'application/json' });
-      if (navigator.sendBeacon('/api/log-event', blob)) return;
+      if (navigator.sendBeacon('api/log-event', blob)) return;
     } catch {
       // fall through to fetch
     }
   }
 
   try {
-    void fetch('/api/log-event', {
+    void fetch('api/log-event', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: payload,

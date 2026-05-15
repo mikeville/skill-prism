@@ -10,7 +10,7 @@ export function AdminGate({ onAuthed }: { onAuthed: () => void }) {
     setError(null);
     setBusy(true);
     try {
-      const r = await fetch('/api/admin-login', {
+      const r = await fetch('api/admin-login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ token }),
