@@ -1,5 +1,7 @@
 import { useTypeMode } from '../../contexts/TypeMode';
 import { ANYBODY } from '../../lib/fontConfig';
+import type { DataState } from '../../types';
+import { ExportButton } from '../Export/ExportButton';
 import { Breadcrumb } from './Breadcrumb';
 
 // Tune the ABC mark here. Anybody axes: wdth [50–150], wght [100–900].
@@ -15,9 +17,10 @@ type Props = {
   onJump: (idx: number) => void;
   onReset: () => void;
   regenerating: boolean;
+  data: DataState | null;
 };
 
-export function Topbar({ path, onJump, onReset, regenerating }: Props) {
+export function Topbar({ path, onJump, onReset, regenerating, data }: Props) {
   const { mode, toggle } = useTypeMode();
   const poster = mode === 'poster';
   const showCrumbs = path.length >= 2;
@@ -42,7 +45,7 @@ export function Topbar({ path, onJump, onReset, regenerating }: Props) {
       <div className="justify-self-center min-w-0">
         {showCrumbs && <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />}
       </div>
-      <div className="justify-self-end flex items-center gap-2">
+      <div className="justify-self-end flex items-center gap-3">
         <button
           type="button"
           onClick={toggle}
@@ -65,6 +68,7 @@ export function Topbar({ path, onJump, onReset, regenerating }: Props) {
             );
           })}
         </button>
+        <ExportButton data={data} topic={path[path.length - 1] ?? ''} />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DataState } from '../../types';
 import { AnimatingProvider } from '../../contexts/Animating';
+import { buildTree } from '../../lib/fractalTree';
 import { colsForSlot, rowsForSlot } from '../../lib/gridTracks';
 import { Level, type CellClick, type FractalNode } from './Level';
 
@@ -263,13 +264,3 @@ export function FractalView({ data, depth, onCellClick, zoomIntent, primaryRef }
   );
 }
 
-function buildTree(data: DataState | null): FractalNode {
-  if (!data) return { term: '', children: undefined };
-  return {
-    term: data.topic,
-    children: data.mains.map((main, i) => ({
-      term: main,
-      children: data.subs[i]?.map((sub) => ({ term: sub })) ?? [],
-    })),
-  };
-}

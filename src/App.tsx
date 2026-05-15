@@ -214,6 +214,7 @@ function AppInner() {
               onJump={handleJump}
               onReset={handleReset}
               regenerating={regenerating}
+              data={data}
             />
           </div>
           <div className="relative flex-1 min-h-0">

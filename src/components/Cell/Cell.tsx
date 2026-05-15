@@ -141,7 +141,7 @@ function PrimaryArrows({ lines, plainFontSize }: { lines: string[]; plainFontSiz
   return (
     <div ref={ref} className="absolute inset-0 pointer-events-none" aria-hidden>
       {w > 0 && h > 0 && ax > 0 && ay > 0 && (
-        <svg width={w} height={h} className="block">
+        <svg width={w} height={h} className="block" data-primary-arrows>
           <defs>
             <marker
               id="primary-arrowhead"
@@ -270,6 +270,8 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
         poster ? (
           <div
             ref={fitRef}
+            data-fit-target
+            data-fit-tier={fitTierFor(tier, compact)}
             className="flex flex-col items-stretch justify-center w-full h-full uppercase"
             style={{ fontFamily: font.family }}
           >
@@ -313,6 +315,9 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
           // reliably on poster→plain toggle.
           <div
             ref={fitRef}
+            data-fit-target
+            data-fit-tier={fitTierFor(tier, compact)}
+            data-fit-mode="plain"
             className="flex flex-col items-stretch justify-center w-full h-full uppercase"
           >
             {lines.map((line, i) => {
