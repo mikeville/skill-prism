@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#000"/>
+  <g stroke="#fff" stroke-width="1.25" stroke-linecap="square" fill="none" shape-rendering="crispEdges">
+    <!-- Lines placed symmetrically around center (x=16, y=16) with 8px cells:
+         offsets -12, -4, +4, +12 → positions 4, 12, 20, 28.
+         Outer margin: 4px. Cell size: 8px. All three cells equal. -->
+    <line x1="4"  y1="4"  x2="4"  y2="28"/>
+    <line x1="12" y1="4"  x2="12" y2="28"/>
+    <line x1="20" y1="4"  x2="20" y2="28"/>
+    <line x1="28" y1="4"  x2="28" y2="28"/>
+    <line x1="4"  y1="4"  x2="28" y2="4"/>
+    <line x1="4"  y1="12" x2="28" y2="12"/>
+    <line x1="4"  y1="20" x2="28" y2="20"/>
+    <line x1="4"  y1="28" x2="28" y2="28"/>
+  </g>
+</svg>
