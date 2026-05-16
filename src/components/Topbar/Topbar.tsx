@@ -3,6 +3,7 @@ import { ANYBODY } from '../../lib/fontConfig';
 import type { DataState } from '../../types';
 import { ExportButton } from '../Export/ExportButton';
 import { Breadcrumb } from './Breadcrumb';
+import { ColorPicker } from './ColorPicker';
 
 // Tune the ABC mark here. Anybody axes: wdth [50–150], wght [100–900].
 const ABC_POSTER = [
@@ -39,6 +40,11 @@ export function Topbar({ path, onJump, onReset, regenerating, data }: Props) {
         type="button"
         onClick={onReset}
         className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover justify-self-start"
+        style={{
+          animation: 'brand-enter 220ms ease-out both',
+          // Match the EmptyState SKILL PRISM weight so the handoff stays visually consistent.
+          fontVariationSettings: '"wdth" 100, "wght" 600',
+        }}
       >
         SKILL PRISM
       </button>
@@ -51,7 +57,7 @@ export function Topbar({ path, onJump, onReset, regenerating, data }: Props) {
           onClick={toggle}
           aria-pressed={poster}
           title={poster ? 'SWITCH TO PLAIN TYPOGRAPHY' : 'SWITCH TO POSTER TYPOGRAPHY'}
-          className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover leading-none"
+          className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover leading-none flex items-center justify-center h-6"
         >
           {ABC_POSTER.map(({ glyph, wdth, wght }) => {
             const axes = poster ? ABC_PLAIN : { wdth, wght };
@@ -68,6 +74,7 @@ export function Topbar({ path, onJump, onReset, regenerating, data }: Props) {
             );
           })}
         </button>
+        <ColorPicker />
         <ExportButton data={data} topic={path[path.length - 1] ?? ''} />
       </div>
     </div>

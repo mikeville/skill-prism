@@ -33,17 +33,28 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center text-ink px-4">
+      {/* Brand mark. Vertically centered inside a virtual topbar-height zone so
+          it sits at the exact same y-position as the Topbar SKILL PRISM button
+          that replaces it after submit. Animates out to the right; the Topbar
+          mark animates in from the left for a jump-cut handoff. */}
       <div
-        className={`absolute top-5 left-6 md:top-6 md:left-8 text-meta font-meta text-ink transition-opacity duration-200 ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}
+        className={`absolute top-0 left-6 md:left-8 flex items-center text-meta font-meta text-ink transition-[opacity,transform] duration-200 ease-out ${isAnimatingOut ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}
+        style={{
+          height: 'clamp(48px, 6vmin, 72px)',
+          // Tweak the weight here. Anybody axis range: wght 100–900.
+          fontVariationSettings: '"wdth" 100, "wght" 600',
+        }}
       >
-        SKILL PRISM <span className="text-ink-mut">· FRACTAL TOPIC BROWSER</span>
+        SKILL PRISM
+        <span className="text-line-meta mx-1.5">·</span>
+        <span
+          className="text-ink-mut"
+          // Lighter weight for the tagline so the SKILL PRISM mark stays the focal point.
+          style={{ fontVariationSettings: '"wdth" 100, "wght" 400' }}
+        >
+          FRACTAL TOPIC BROWSER
+        </span>
       </div>
-      <div
-        className={`absolute top-5 right-6 md:top-6 md:right-8 text-meta font-meta text-ink-mut transition-opacity duration-200 ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}
-      >
-        v0.1
-      </div>
-
       {!isAnimatingOut && (
         <div style={{ width: dims.morphTargetWidth }}>
           <div
@@ -80,13 +91,10 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
         </div>
       )}
 
-      <div
-        className={`absolute bottom-5 left-6 md:bottom-6 md:left-8 text-meta font-meta text-ink-mut max-w-[360px] leading-relaxed transition-opacity duration-200 ${isAnimatingOut ? 'opacity-0' : 'opacity-100'}`}
-      >
-        EACH CELL DECOMPOSES FURTHER. TAP TO DESCEND.
-        <br />
-        THE PATH YOU TAKE SHAPES WHAT YOU SEE NEXT.
-      </div>
+      {/* Bottom-left intro-copy slot. Intentionally empty for now. To reintroduce,
+          add a <div> here with the same positioning + transition pattern used
+          by the top-left brand mark above (absolute bottom-5 left-6 md:bottom-6
+          md:left-8, text-meta font-meta text-ink-mut, fade-out via isAnimatingOut). */}
     </div>
   );
 }

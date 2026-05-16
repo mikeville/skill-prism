@@ -4,6 +4,7 @@ import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
 import type { ZoomIntent } from './components/FractalView/FractalView';
 import { Topbar } from './components/Topbar/Topbar';
+import { ColorThemeProvider } from './contexts/ColorTheme';
 import { TypeModeProvider } from './contexts/TypeMode';
 import { useBreakdown } from './hooks/useBreakdown';
 import { useContainerDepth } from './hooks/useContainerDepth';
@@ -34,9 +35,11 @@ export default function App() {
     );
   }
   return (
-    <TypeModeProvider>
-      <AppInner />
-    </TypeModeProvider>
+    <ColorThemeProvider>
+      <TypeModeProvider>
+        <AppInner />
+      </TypeModeProvider>
+    </ColorThemeProvider>
   );
 }
 

@@ -19,7 +19,7 @@ export function ExportButton({ data, topic }: Props) {
         disabled={disabled}
         title="EXPORT"
         aria-label="Export"
-        className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover leading-none disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
+        className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover leading-none disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center h-6"
       >
         {/* Down-arrow into tray glyph — keeps the topbar's text-only minimalism */}
         <svg
@@ -29,6 +29,7 @@ export function ExportButton({ data, topic }: Props) {
           fill="none"
           stroke="currentColor"
           strokeWidth="1.25"
+          style={{ transform: 'translateY(-1px)' }}
           aria-hidden
         >
           <path d="M7 1.5 V9" />
