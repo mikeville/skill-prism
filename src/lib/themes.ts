@@ -17,6 +17,7 @@ export const COLOR_SETS: readonly ColorSet[] = [
   { id: '09', ink: '#3d1f3b', inkMut: '#a85a82', paper: '#f5d8df' },
   { id: '10', ink: '#0a0a0a', inkMut: '#ff2d8a', paper: '#fafafa' },
   { id: '11', ink: '#2c3a14', inkMut: '#b89a3e', paper: '#cdd6b0' },
+  { id: '12', ink: '#000000', inkMut: '#7a7a7a', paper: '#ffffff' },
 ] as const;
 
 export const DEFAULT_SET_ID = '03';

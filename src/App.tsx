@@ -4,7 +4,7 @@ import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
 import type { ZoomIntent } from './components/FractalView/FractalView';
 import { Topbar } from './components/Topbar/Topbar';
-import { ColorThemeProvider } from './contexts/ColorTheme';
+import { ColorThemeProvider, useColorTheme } from './contexts/ColorTheme';
 import { TypeModeProvider } from './contexts/TypeMode';
 import { useBreakdown } from './hooks/useBreakdown';
 import { useContainerDepth } from './hooks/useContainerDepth';
@@ -68,6 +68,7 @@ function AppInner() {
   const { data, regenerating, error } = useBreakdown(path);
   const { ref: gridContainerRef, depth } = useContainerDepth();
   useViewportAspect();
+  const { randomize: randomizeColor } = useColorTheme();
   const zoomIntent = useRef<ZoomIntent | null>(null);
   const prevPathLengthRef = useRef(0);
 
@@ -87,6 +88,10 @@ function AppInner() {
   const handleSubmit = (topic: string, firstRect: FirstRect | null) => {
     morphFirstRectRef.current = firstRect;
     zoomIntent.current = null;
+    // Each new search reveals a new palette. Drill-down clicks and manual
+    // picker selections don't trigger this; only fresh searches and initial
+    // empty-state page loads (handled in ColorTheme readInitialSet).
+    randomizeColor();
     setPath([topic]);
   };
 

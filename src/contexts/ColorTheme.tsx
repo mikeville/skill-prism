@@ -16,6 +16,7 @@ type Ctx = {
   resolved: { ink: string; inkMut: string; paper: string };
   setSet: (id: string) => void;
   toggleSwap: () => void;
+  randomize: () => void;
 };
 
 const ColorThemeContext = createContext<Ctx | null>(null);
@@ -23,8 +24,22 @@ const ColorThemeContext = createContext<Ctx | null>(null);
 const STORAGE_KEY_SET = 'skill-prism.colorSet';
 const STORAGE_KEY_SWAP = 'skill-prism.colorSwap';
 
+function randomSetId(excludeId?: string): string {
+  const pool = excludeId ? COLOR_SETS.filter((s) => s.id !== excludeId) : COLOR_SETS;
+  return pool[Math.floor(Math.random() * pool.length)].id;
+}
+
+function isEmptyHashLoad(): boolean {
+  const h = window.location.hash;
+  return !h || h === '#' || h === '#/';
+}
+
 function readInitialSet(): string {
   if (typeof window === 'undefined') return DEFAULT_SET_ID;
+  // Fresh load into the empty/home state → always pick a random palette so
+  // the app greets the user with variety. A drilled-down URL (hash present)
+  // restores from localStorage so a refresh inside a topic keeps its color.
+  if (isEmptyHashLoad()) return randomSetId();
   try {
     const v = window.localStorage.getItem(STORAGE_KEY_SET);
     if (v && COLOR_SETS.some((s) => s.id === v)) return v;
@@ -86,9 +101,13 @@ export function ColorThemeProvider({ children }: { children: ReactNode }) {
     setSwapped((s) => !s);
   }, []);
 
+  const randomize = useCallback(() => {
+    setSetId((curr) => randomSetId(curr));
+  }, []);
+
   const value = useMemo<Ctx>(
-    () => ({ setId, swapped, set, resolved, setSet, toggleSwap }),
-    [setId, swapped, set, resolved, setSet, toggleSwap],
+    () => ({ setId, swapped, set, resolved, setSet, toggleSwap, randomize }),
+    [setId, swapped, set, resolved, setSet, toggleSwap, randomize],
   );
 
   return <ColorThemeContext.Provider value={value}>{children}</ColorThemeContext.Provider>;
