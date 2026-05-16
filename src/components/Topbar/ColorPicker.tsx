@@ -181,7 +181,6 @@ function Ticks({ count }: { count: number }) {
             height: 8,
             marginTop: -4,
             background: 'var(--c-ink-mut)',
-            opacity: 0.55,
           }}
         />
       ))}
@@ -222,7 +221,7 @@ function CircleIcon() {
       viewBox="0 0 14 14"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.5}
+      strokeWidth={1.25}
       style={{ transform: 'translateY(-1px)' }}
       aria-hidden
     >
@@ -241,7 +240,7 @@ function SwapIcon() {
       viewBox="0 0 14 14"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.25}
+      strokeWidth={1.2}
       aria-hidden
     >
       <path d="M1.5 4.5 L12.5 4.5" />

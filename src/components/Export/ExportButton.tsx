@@ -28,7 +28,7 @@ export function ExportButton({ data, topic }: Props) {
           viewBox="0 0 14 14"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.25"
+          strokeWidth="1.2"
           style={{ transform: 'translateY(-1px)' }}
           aria-hidden
         >
