@@ -59,7 +59,7 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
         <div style={{ width: dims.morphTargetWidth }}>
           <div
             ref={wrapperRef}
-            className="border border-cell border-line-meta bg-paper p-4 md:p-6"
+            className="border border-cell border-line-meta focus-within:border-ink-mut transition-colors duration-hover bg-paper p-4 md:p-6"
           >
             <input
               ref={inputRef}
@@ -80,7 +80,7 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
                 <button
                   type="button"
                   onClick={() => submit(ex)}
-                  className="underline decoration-ink-mut underline-offset-[3px] text-ink-mut hover:text-ink transition-colors duration-hover"
+                  className="underline decoration-ink-mut underline-offset-[3px] text-ink-mut hover:text-ink transition-colors duration-hover focus-ring"
                 >
                   {ex}
                 </button>

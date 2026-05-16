@@ -46,7 +46,7 @@ export function SkillSidebar({ markdown, open, onClose }: Props) {
           type="button"
           onClick={onClose}
           aria-label="Close skill draft"
-          className="ml-auto w-11 h-11 -mr-2 flex items-center justify-center text-ink hover:opacity-60 transition-opacity duration-hover"
+          className="ml-auto w-11 h-11 -mr-2 flex items-center justify-center text-ink hover:opacity-60 transition-opacity duration-hover focus-ring"
         >
           ✕
         </button>
@@ -60,7 +60,7 @@ export function SkillSidebar({ markdown, open, onClose }: Props) {
         <button
           type="button"
           onClick={handleCopy}
-          className="text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover"
+          className="text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover focus-ring"
         >
           {copied ? 'Copied' : 'Copy SKILL.md'}
         </button>

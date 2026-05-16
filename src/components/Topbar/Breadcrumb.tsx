@@ -20,7 +20,7 @@ export function Breadcrumb({ path, onJump, regenerating }: Props) {
               className={
                 isLast
                   ? 'text-ink cursor-default truncate'
-                  : 'text-ink-mut hover:text-ink transition-colors duration-hover truncate'
+                  : 'text-ink-mut hover:text-ink transition-colors duration-hover focus-ring truncate'
               }
             >
               {node}

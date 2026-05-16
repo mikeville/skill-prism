@@ -75,7 +75,7 @@ function CircleTrigger({ open, onToggle }: { open: boolean; onToggle: () => void
       aria-expanded={open}
       aria-label="COLOR SET"
       title="COLOR SET"
-      className="text-ink-mut hover:opacity-60 transition-opacity duration-hover flex items-center justify-center"
+      className="text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring flex items-center justify-center"
       style={{ width: 24, height: 24, lineHeight: 0 }}
     >
       <CircleIcon />
@@ -196,7 +196,7 @@ function SwapButton({ swapped, onSwap }: { swapped: boolean; onSwap: () => void 
       aria-label="SWAP PAPER AND INK"
       aria-pressed={swapped}
       title={swapped ? 'RESTORE PAPER/INK' : 'SWAP PAPER AND INK'}
-      className="hover:opacity-60 transition-opacity duration-hover shrink-0 flex items-center justify-center"
+      className="hover:opacity-60 transition-opacity duration-hover focus-ring shrink-0 flex items-center justify-center"
       style={{
         width: 28,
         height: 28,

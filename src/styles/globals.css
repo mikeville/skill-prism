@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Interaction state vocabulary. Three patterns, applied consistently:
+ *   • Icon/text button — `hover:opacity-60 transition-opacity duration-hover focus-ring`
+ *     (topbar items, modal buttons, sidebar buttons, color picker trigger, swap)
+ *   • Color-shift link — `text-ink-mut hover:text-ink transition-colors duration-hover focus-ring`
+ *     (breadcrumb links, EmptyState example buttons)
+ *   • Cell           — `cursor-pointer hover-bg-cell focus-ring-inset`
+ *     (clickable cells only; primary stays opt-out via the clickable gate)
+ * Hover bg comes from --c-fill-page (a faint ink tint over paper). Focus
+ * outlines use --c-ink at 1px. Component classes defined under @layer components.
+ */
+
 @layer base {
   :root {
     /* The three knobs. Edit these. */
@@ -11,7 +22,10 @@
 
     /* Derived. Tweak the ratios, not the colors. */
     --c-ink-faint: color-mix(in srgb, var(--c-ink) 18%, transparent);
-    --c-fill-page: color-mix(in srgb, var(--c-ink) 0%, var(--c-paper));
+    /* Faint ink tint over paper. Used as the hover bg for cells and as the
+       differentiated fill for modal selects + the export aspect preview. The
+       6% mix is calibrated to match the skeleton pulse's subtlety. */
+    --c-fill-page: color-mix(in srgb, var(--c-ink) 6%, var(--c-paper));
     --c-line-meta: color-mix(in srgb, var(--c-paper) 50%, var(--c-ink));
     --c-line-cell: color-mix(in srgb, var(--c-ink-mut) 20%, var(--c-paper));
   }
@@ -70,8 +84,15 @@
   padding: 0;
   display: block;
 }
+/* Hide outline for mouse focus; show ink ring for keyboard focus on the thumb. */
 .color-slider:focus {
   outline: none;
+}
+.color-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--c-paper), 0 0 0 3px var(--c-ink);
+}
+.color-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px var(--c-paper), 0 0 0 3px var(--c-ink);
 }
 .color-slider::-webkit-slider-runnable-track {
   height: 1px;
@@ -109,6 +130,22 @@
 }
 .color-slider:active::-moz-range-thumb {
   transform: scale(1.15);
+}
+
+/* Shared interaction-state classes. See the vocabulary block at the top of
+   this file for which class to use where. */
+@layer components {
+  .focus-ring:focus-visible {
+    outline: 1px solid var(--c-ink);
+    outline-offset: 2px;
+  }
+  .focus-ring-inset:focus-visible {
+    outline: 1px solid var(--c-ink);
+    outline-offset: -2px;
+  }
+  .hover-bg-cell {
+    @apply hover:bg-fill-page transition-colors duration-hover;
+  }
 }
 
 /* Brand-mark entrance on the Topbar. Pairs with the EmptyState mark's

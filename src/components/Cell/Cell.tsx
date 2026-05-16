@@ -234,8 +234,20 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
   const base =
     `relative flex items-center justify-center text-center overflow-hidden ` +
     `transition-colors duration-hover w-full h-full ${padding}`;
-  const hover = clickable ? 'cursor-pointer hover:bg-fill-page' : '';
+  // Clickable cells get the shared cell interaction vocabulary: subtle
+  // ink-tinted hover bg + inset focus ring. Primary stays opt-out via the
+  // clickable gate (no onClick → no hover, focus, or keyboard handler).
+  const hover = clickable ? 'cursor-pointer hover-bg-cell focus-ring-inset' : '';
   const fill = tierFill[tier];
+
+  const onKeyDown = clickable
+    ? (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }
+    : undefined;
 
   const type = poster
     ? compact && tier === 'secondary'
@@ -257,6 +269,9 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
     <div
       ref={setRef}
       onClick={clickable ? onClick : undefined}
+      onKeyDown={onKeyDown}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
       className={`${base} ${fill} ${type} ${hover}`.trim()}
     >
       {!poster && tier === 'primary' && state === 'content' && (

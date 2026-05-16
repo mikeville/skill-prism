@@ -169,7 +169,7 @@ export function ExportModal({ open, onClose, data, topic }: Props) {
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover disabled:opacity-40"
+              className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring disabled:opacity-40 disabled:hover:opacity-40 disabled:cursor-not-allowed"
               aria-label="Close"
             >
               CLOSE
@@ -181,7 +181,7 @@ export function ExportModal({ open, onClose, data, topic }: Props) {
               value={format}
               onChange={(e) => setFormat(e.target.value as FormatKey)}
               disabled={busy}
-              className="w-full bg-fill-page text-ink border border-line-meta pl-2.5 pr-8 py-2 text-meta font-meta focus:outline-none focus:border-ink-mut"
+              className="w-full bg-fill-page text-ink border border-line-meta pl-2.5 pr-8 py-2 text-meta font-meta cursor-pointer hover:border-ink-mut transition-colors duration-hover focus:outline-none focus:border-ink-mut disabled:cursor-not-allowed disabled:opacity-40"
               style={SELECT_STYLE}
             >
               {(Object.keys(FORMAT_LABELS) as FormatKey[]).map((k) => (
@@ -197,7 +197,7 @@ export function ExportModal({ open, onClose, data, topic }: Props) {
               value={aspect}
               onChange={(e) => setAspect(e.target.value as AspectKey)}
               disabled={busy}
-              className="w-full bg-fill-page text-ink border border-line-meta pl-2.5 pr-8 py-2 text-meta font-meta focus:outline-none focus:border-ink-mut"
+              className="w-full bg-fill-page text-ink border border-line-meta pl-2.5 pr-8 py-2 text-meta font-meta cursor-pointer hover:border-ink-mut transition-colors duration-hover focus:outline-none focus:border-ink-mut disabled:cursor-not-allowed disabled:opacity-40"
               style={SELECT_STYLE}
             >
               {(Object.keys(ASPECT_PRESETS) as AspectKey[]).map((k) => (
@@ -234,7 +234,7 @@ export function ExportModal({ open, onClose, data, topic }: Props) {
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover disabled:opacity-40"
+              className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring disabled:opacity-40 disabled:hover:opacity-40 disabled:cursor-not-allowed"
             >
               CANCEL
             </button>
@@ -246,7 +246,7 @@ export function ExportModal({ open, onClose, data, topic }: Props) {
                 setRenderJob({ format, aspect });
               }}
               disabled={busy || !data}
-              className="text-meta font-meta text-ink hover:opacity-60 transition-opacity duration-hover disabled:opacity-40 border border-ink px-3 py-1"
+              className="text-meta font-meta text-ink hover:opacity-60 transition-opacity duration-hover focus-ring disabled:opacity-40 disabled:hover:opacity-40 disabled:cursor-not-allowed border border-ink px-3 py-1"
             >
               {buttonLabel}
             </button>

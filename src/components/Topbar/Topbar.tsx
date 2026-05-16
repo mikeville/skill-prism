@@ -36,18 +36,27 @@ export function Topbar({ path, onJump, onReset, regenerating, data }: Props) {
         paddingRight: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
       }}
     >
-      <button
-        type="button"
-        onClick={onReset}
-        className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover justify-self-start"
-        style={{
-          animation: 'brand-enter 220ms ease-out both',
-          // Match the EmptyState SKILL PRISM weight so the handoff stays visually consistent.
-          fontVariationSettings: '"wdth" 100, "wght" 600',
-        }}
+      {/* Entrance animation lives on this wrapper, not the button. The
+          brand-enter keyframe ends at opacity:1 with animation-fill-mode:both,
+          which would otherwise pin the button's opacity and block hover:opacity-60
+          from ever applying. Wrapper opacity * button opacity composes, so hover
+          works freely on the inner element. */}
+      <span
+        className="justify-self-start"
+        style={{ animation: 'brand-enter 220ms ease-out both' }}
       >
-        SKILL PRISM
-      </button>
+        <button
+          type="button"
+          onClick={onReset}
+          className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring"
+          style={{
+            // Match the EmptyState SKILL PRISM weight so the handoff stays visually consistent.
+            fontVariationSettings: '"wdth" 100, "wght" 600',
+          }}
+        >
+          SKILL PRISM
+        </button>
+      </span>
       <div className="justify-self-center min-w-0">
         {showCrumbs && <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />}
       </div>
@@ -57,7 +66,7 @@ export function Topbar({ path, onJump, onReset, regenerating, data }: Props) {
           onClick={toggle}
           aria-pressed={poster}
           title={poster ? 'SWITCH TO PLAIN TYPOGRAPHY' : 'SWITCH TO POSTER TYPOGRAPHY'}
-          className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover leading-none flex items-center justify-center h-6"
+          className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring leading-none flex items-center justify-center h-6"
         >
           {ABC_POSTER.map(({ glyph, wdth, wght }) => {
             const axes = poster ? ABC_PLAIN : { wdth, wght };

@@ -19,7 +19,7 @@ export function ExportButton({ data, topic }: Props) {
         disabled={disabled}
         title="EXPORT"
         aria-label="Export"
-        className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover leading-none disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center h-6"
+        className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring leading-none disabled:opacity-40 disabled:hover:opacity-40 disabled:cursor-not-allowed flex items-center justify-center h-6"
       >
         {/* Down-arrow into tray glyph — keeps the topbar's text-only minimalism */}
         <svg
