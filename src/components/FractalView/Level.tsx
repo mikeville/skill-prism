@@ -194,12 +194,21 @@ export function Level({
   // Mobile single-grid: dark outer frame matching desktop's outer-3×3 frame.
   // This wrapper is the morph target on mobile (the empty-state input grows
   // into this entire frame, then the inner 3×3 fades in inside it).
+  //
+  // Forced 3:4 portrait aspect on mobile (was: w-full h-full which gave very
+  // tall ~9:21 cells). Each cell ends up ~3:4 too — still portrait but far
+  // less extreme — which makes typography easier to fit and improves cross-
+  // cell cap/baseline alignment. The grid is centered in the available
+  // vertical space via the flex wrapper.
   return (
-    <div
-      ref={primaryRef}
-      className="bg-line-meta p-px w-full h-full overflow-hidden"
-    >
-      {innerGrid}
+    <div className="w-full h-full flex items-center justify-center">
+      <div
+        ref={primaryRef}
+        className="bg-line-meta p-px overflow-hidden"
+        style={{ aspectRatio: '3 / 4', width: '100%', maxHeight: '100%' }}
+      >
+        {innerGrid}
+      </div>
     </div>
   );
 }

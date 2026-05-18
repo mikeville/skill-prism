@@ -17,14 +17,17 @@ type Props = {
   path: string[];
   onJump: (idx: number) => void;
   onReset: () => void;
-  regenerating: boolean;
   data: DataState | null;
+  // On mobile the breadcrumb is hoisted out of the center column and rendered
+  // in the empty space above the grid (see App.tsx) — pass true there so the
+  // topbar doesn't render its own copy.
+  hideBreadcrumb?: boolean;
 };
 
-export function Topbar({ path, onJump, onReset, regenerating, data }: Props) {
+export function Topbar({ path, onJump, onReset, data, hideBreadcrumb }: Props) {
   const { mode, toggle } = useTypeMode();
   const poster = mode === 'poster';
-  const showCrumbs = path.length >= 2;
+  const showCrumbs = path.length >= 2 && !hideBreadcrumb;
 
   return (
     <div
@@ -58,7 +61,7 @@ export function Topbar({ path, onJump, onReset, regenerating, data }: Props) {
         </button>
       </span>
       <div className="justify-self-center min-w-0">
-        {showCrumbs && <Breadcrumb path={path} onJump={onJump} regenerating={regenerating} />}
+        {showCrumbs && <Breadcrumb path={path} onJump={onJump} />}
       </div>
       <div className="justify-self-end flex items-center gap-3">
         <button

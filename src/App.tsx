@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { EmptyState, type FirstRect } from './components/EmptyState/EmptyState';
 import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
 import type { ZoomIntent } from './components/FractalView/FractalView';
+import { Breadcrumb } from './components/Topbar/Breadcrumb';
 import { Topbar } from './components/Topbar/Topbar';
 import { ColorThemeProvider, useColorTheme } from './contexts/ColorTheme';
 import { TypeModeProvider } from './contexts/TypeMode';
@@ -65,7 +66,7 @@ const MORPH_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
 function AppInner() {
   const [path, setPath] = usePath();
-  const { data, regenerating, error } = useBreakdown(path);
+  const { data, error } = useBreakdown(path);
   const { ref: gridContainerRef, depth } = useContainerDepth();
   useViewportAspect();
   const { randomize: randomizeColor } = useColorTheme();
@@ -79,11 +80,41 @@ function AppInner() {
   // FLIP target ref: the depth=2 primary cell (desktop) or depth=1 standalone
   // outer frame (mobile). Set by Cell/Level via callback ref on mount.
   const primaryCellRef = useRef<HTMLDivElement | null>(null);
-  const setPrimaryCellRef = (el: HTMLDivElement | null) => {
+  // Mirror the ref into state so the mobile lattice effect re-runs when the
+  // primary cell node mounts/unmounts (raw refs don't trigger re-renders).
+  const [primaryCellEl, setPrimaryCellEl] = useState<HTMLDivElement | null>(null);
+  const setPrimaryCellRef = useCallback((el: HTMLDivElement | null) => {
     primaryCellRef.current = el;
-  };
+    setPrimaryCellEl(el);
+  }, []);
+
+  // Mobile-only lattice: the 3×3 grid's row/col divider positions, extended
+  // viewport-wide so the grid reads as part of a larger visual lattice rather
+  // than a floating box. We measure the standalone grid frame (which IS the
+  // primary cell ref target on mobile) and re-render the lines on resize.
+  type LatticeRect = { left: number; top: number; width: number; height: number };
+  const [latticeRect, setLatticeRect] = useState<LatticeRect | null>(null);
+  useEffect(() => {
+    if (!primaryCellEl || depth !== 1) {
+      setLatticeRect(null);
+      return;
+    }
+    const update = () => {
+      const r = primaryCellEl.getBoundingClientRect();
+      setLatticeRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(primaryCellEl);
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [primaryCellEl, depth]);
 
   const inEmpty = path.length === 0;
+  const isMobile = depth === 1;
 
   const handleSubmit = (topic: string, firstRect: FirstRect | null) => {
     morphFirstRectRef.current = firstRect;
@@ -188,22 +219,30 @@ function AppInner() {
   };
 
   return (
-    <div className="fixed inset-0 bg-fill-page text-ink overflow-hidden">
+    <div className="fixed inset-0 bg-paper text-ink overflow-hidden">
       {inEmpty && <EmptyState onSubmit={handleSubmit} />}
       {!inEmpty && (
         <div ref={gridContainerRef} className="absolute inset-0 flex flex-col">
-          <div
-            aria-hidden
-            data-perimeter
-            className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
-            style={{ top: 'clamp(48px, 6vmin, 72px)' }}
-          />
-          <div
-            aria-hidden
-            data-perimeter
-            className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
-            style={{ bottom: 'clamp(48px, 6vmin, 72px)' }}
-          />
+          {/* Desktop perimeter: top/bottom horizontals frame the FractalView's
+              padded area. Hidden on mobile because the new lattice (below)
+              draws lines at the grid's own top/bottom frame positions instead,
+              which leaves the topbar/breadcrumb area open. */}
+          {!isMobile && (
+            <>
+              <div
+                aria-hidden
+                data-perimeter
+                className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
+                style={{ top: 'clamp(48px, 6vmin, 72px)' }}
+              />
+              <div
+                aria-hidden
+                data-perimeter
+                className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
+                style={{ bottom: 'clamp(48px, 6vmin, 72px)' }}
+              />
+            </>
+          )}
           <div
             aria-hidden
             data-perimeter
@@ -216,13 +255,54 @@ function AppInner() {
             className="absolute top-0 bottom-0 w-px bg-line-meta pointer-events-none z-10"
             style={{ right: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1))' }}
           />
+          {/* Mobile lattice: only the OUTER edges of the 3×3 are extended out
+              past the grid frame into the surrounding margin. Inner column/
+              row dividers stay contained within the grid. The existing left/
+              right perimeter verticals above already coincide with the grid's
+              left/right frame, so the only new lines we add here are the
+              extended top and bottom edges. */}
+          {isMobile && latticeRect && (
+            <>
+              <div
+                aria-hidden
+                data-perimeter
+                className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
+                style={{ top: latticeRect.top }}
+              />
+              <div
+                aria-hidden
+                data-perimeter
+                className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
+                style={{ top: latticeRect.top + latticeRect.height - 1 }}
+              />
+            </>
+          )}
+          {/* Mobile-only breadcrumb row: sits just above the grid's top edge.
+              Bottom-aligned (not centered) within the gap so it visually
+              anchors to the top grid line, with a small breathing gap above
+              the line. On desktop the breadcrumb still lives inside the
+              Topbar's center column. */}
+          {isMobile && path.length >= 2 && latticeRect && (
+            <div
+              data-perimeter
+              className="absolute left-0 right-0 z-20 flex items-end justify-center text-meta font-meta pb-3"
+              style={{
+                top: 'clamp(48px, 6vmin, 72px)',
+                height: `calc(${latticeRect.top}px - clamp(48px, 6vmin, 72px))`,
+                paddingLeft: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
+                paddingRight: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
+              }}
+            >
+              <Breadcrumb path={path} onJump={handleJump} allInk />
+            </div>
+          )}
           <div data-perimeter>
             <Topbar
               path={path}
               onJump={handleJump}
               onReset={handleReset}
-              regenerating={regenerating}
               data={data}
+              hideBreadcrumb={isMobile}
             />
           </div>
           <div className="relative flex-1 min-h-0">
