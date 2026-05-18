@@ -16,6 +16,10 @@ type LevelProps = {
   depth: 1 | 2;
   loading: boolean;
   onCellClick: (c: CellClick) => void;
+  // Per-cell "now what?" trigger. Called with the cell's term. Desktop only
+  // (the Cell gates the affordance to md+); on mobile App renders a bottom
+  // panel locked to the focal term instead.
+  onInsightClick?: (term: string) => void;
   trail?: { mainIdx: number };
   // standalone=true → this depth=1 grid renders its own dark frame (mobile single-grid).
   // standalone=false → it sits inside a depth=2 outer wrapper that already paints the dark gaps + frame.
@@ -42,6 +46,7 @@ export function Level({
   depth,
   loading,
   onCellClick,
+  onInsightClick,
   trail,
   standalone = true,
   focusSlot,
@@ -84,6 +89,9 @@ export function Level({
                 state={state}
                 content={term}
                 domRef={primaryRef}
+                onInsightClick={
+                  term && onInsightClick ? () => onInsightClick(term) : undefined
+                }
               />
             );
           }
@@ -97,6 +105,7 @@ export function Level({
               depth={1}
               loading={loading}
               onCellClick={onCellClick}
+              onInsightClick={onInsightClick}
               trail={{ mainIdx: childIdx }}
               standalone={false}
               outerBlockSlot={slot}
@@ -141,11 +150,23 @@ export function Level({
                     })
                 : undefined;
             return (
-              <Cell key={slot} tier="secondary" state={state} content={term} onClick={click} />
+              <Cell
+                key={slot}
+                tier="secondary"
+                state={state}
+                content={term}
+                onClick={click}
+                onInsightClick={
+                  term && onInsightClick ? () => onInsightClick(term) : undefined
+                }
+              />
             );
           }
 
           // Center of the center block (or mobile standalone) — the focal topic.
+          // No insight icon here: on desktop this slot is unreachable (the
+          // depth=2 outer renders the focal directly), and on mobile insight is
+          // surfaced via the bottom panel.
           return <Cell key={slot} tier="primary" state={state} content={term} />;
         }
 
@@ -183,6 +204,9 @@ export function Level({
             content={term}
             onClick={state === 'content' ? click : undefined}
             compact={compact}
+            onInsightClick={
+              term && onInsightClick ? () => onInsightClick(term) : undefined
+            }
           />
         );
       })}

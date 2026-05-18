@@ -17,6 +17,11 @@ type CellProps = {
   // Callback ref attached to the cell's outer div. App.tsx uses this to grab
   // the primary cell node for the empty→active morph (FLIP from input rect).
   domRef?: (el: HTMLDivElement | null) => void;
+  // Optional "now what?" hover affordance — small icon in the top-right that
+  // opens the insight drawer for this cell's term. Only shown when the cell
+  // has content. Hidden on mobile (md: gated) since mobile uses the bottom
+  // panel locked to the focal term instead.
+  onInsightClick?: () => void;
 };
 
 // All tiers share the same paper fill — visual hierarchy is now carried
@@ -175,7 +180,16 @@ function PrimaryArrows({ lines, plainFontSize }: { lines: string[]; plainFontSiz
   );
 }
 
-export function Cell({ tier, state, content, onClick, children, compact, domRef }: CellProps) {
+export function Cell({
+  tier,
+  state,
+  content,
+  onClick,
+  children,
+  compact,
+  domRef,
+  onInsightClick,
+}: CellProps) {
   const { mode } = useTypeMode();
   const font = ANYBODY;
   const poster = mode === 'poster';
@@ -231,8 +245,9 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
   // inner area; tracking pushes the first/last char flush with the inner edge
   // rather than the cell border.
   const padding = 'p-4';
+  // `group` lets the insight "i" affordance use group-hover to reveal on cell hover.
   const base =
-    `relative flex items-center justify-center text-center overflow-hidden ` +
+    `group relative flex items-center justify-center text-center overflow-hidden ` +
     `transition-colors duration-hover w-full h-full ${padding}`;
   // Clickable cells get the shared cell interaction vocabulary: subtle
   // ink-tinted hover bg + inset focus ring. Primary stays opt-out via the
@@ -276,6 +291,20 @@ export function Cell({ tier, state, content, onClick, children, compact, domRef 
     >
       {!poster && tier === 'primary' && state === 'content' && (
         <PrimaryArrows lines={lines} plainFontSize={plainFontSize} />
+      )}
+      {onInsightClick && state === 'content' && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onInsightClick();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          aria-label={content ? `Get insight on ${content}` : 'Get insight'}
+          className="hidden md:flex absolute top-1.5 right-1.5 w-5 h-5 items-center justify-center text-meta font-meta text-ink-mut bg-paper border border-line-meta opacity-0 group-hover:opacity-100 transition-opacity duration-hover hover:text-ink hover:border-ink focus-ring z-10"
+        >
+          i
+        </button>
       )}
       {state === 'loading' ? (
         <Skeleton />

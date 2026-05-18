@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { apiAdminProxy } from './vite-plugins/api-admin';
 import { apiCompleteProxy } from './vite-plugins/api-complete';
+import { apiInsightProxy } from './vite-plugins/api-insight';
 import { apiLogEventProxy } from './vite-plugins/api-log-event';
 import { tailwindConfigHmr } from './vite-plugins/tailwind-config-hmr';
 
@@ -13,7 +14,14 @@ export default defineConfig({
   // Relative base so built asset URLs resolve correctly when the app is
   // proxied at a sub-path (e.g. mikemake.com/skillprism/) as well as at root.
   base: './',
-  plugins: [react(), apiCompleteProxy(), apiLogEventProxy(), apiAdminProxy(), tailwindConfigHmr()],
+  plugins: [
+    react(),
+    apiCompleteProxy(),
+    apiInsightProxy(),
+    apiLogEventProxy(),
+    apiAdminProxy(),
+    tailwindConfigHmr(),
+  ],
   server: {
     port: 5173,
     watch: {

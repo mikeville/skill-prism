@@ -3,6 +3,8 @@ import { EmptyState, type FirstRect } from './components/EmptyState/EmptyState';
 import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
 import type { ZoomIntent } from './components/FractalView/FractalView';
+import { InsightDrawer } from './components/Insight/InsightDrawer';
+import { InsightPanel } from './components/Insight/InsightPanel';
 import { Breadcrumb } from './components/Topbar/Breadcrumb';
 import { Topbar } from './components/Topbar/Topbar';
 import { ColorThemeProvider, useColorTheme } from './contexts/ColorTheme';
@@ -218,6 +220,26 @@ function AppInner() {
     setPath([]);
   };
 
+  // "Now what?" payoff state. Desktop: drawer for any clicked cell's term.
+  // Mobile: a bottom panel below renders insight for the focal term directly
+  // from `path`, no per-cell trigger.
+  const [insightTarget, setInsightTarget] = useState<{
+    path: string[];
+    term: string;
+  } | null>(null);
+  const handleInsightClick = useCallback(
+    (term: string) => {
+      // If the term IS the focal, treat the parent breadcrumb as context;
+      // otherwise the user is asking about a sibling/sub of the focal, so the
+      // current path is itself the context that led them there.
+      const isFocal = path.length > 0 && term === path[path.length - 1];
+      const parentPath = isFocal ? path.slice(0, -1) : path;
+      setInsightTarget({ path: parentPath, term });
+    },
+    [path],
+  );
+  const closeInsight = useCallback(() => setInsightTarget(null), []);
+
   return (
     <div className="fixed inset-0 bg-paper text-ink overflow-hidden">
       {inEmpty && <EmptyState onSubmit={handleSubmit} />}
@@ -310,6 +332,7 @@ function AppInner() {
               data={data}
               depth={depth}
               onCellClick={handleCellClick}
+              onInsightClick={isMobile ? undefined : handleInsightClick}
               zoomIntent={zoomIntent}
               primaryRef={setPrimaryCellRef}
             />
@@ -319,6 +342,17 @@ function AppInner() {
               </div>
             )}
           </div>
+          {/* Desktop drawer — per-cell insight on demand. */}
+          {!isMobile && (
+            <InsightDrawer
+              open={insightTarget !== null}
+              onClose={closeInsight}
+              path={insightTarget?.path ?? []}
+              term={insightTarget?.term ?? null}
+            />
+          )}
+          {/* Mobile panel — always-visible, locked to the focal term. */}
+          {isMobile && <InsightPanel path={path} />}
         </div>
       )}
     </div>

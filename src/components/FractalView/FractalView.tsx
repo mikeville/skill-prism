@@ -15,6 +15,9 @@ type FractalViewProps = {
   data: DataState | null;
   depth: 1 | 2;
   onCellClick: (c: CellClick) => void;
+  // Per-cell "now what?" trigger. Threaded to Cell via Level. App opens the
+  // insight drawer keyed on this term.
+  onInsightClick?: (term: string) => void;
   zoomIntent: React.MutableRefObject<ZoomIntent | null>;
   // Callback ref attached to the morph target — depth=2 primary cell on
   // desktop, depth=1 standalone outer frame on mobile. App.tsx uses this to
@@ -38,7 +41,14 @@ const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 const SWAP_FROM = 0.46; // opacity cross-fade window (fraction of ANIM_MS)
 const SWAP_TO = 0.54;
 
-export function FractalView({ data, depth, onCellClick, zoomIntent, primaryRef }: FractalViewProps) {
+export function FractalView({
+  data,
+  depth,
+  onCellClick,
+  onInsightClick,
+  zoomIntent,
+  primaryRef,
+}: FractalViewProps) {
   const newLayerRef = useRef<HTMLDivElement>(null);
   const oldLayerRef = useRef<HTMLDivElement>(null);
   const newGridRef = useRef<HTMLDivElement>(null);
@@ -253,6 +263,7 @@ export function FractalView({ data, depth, onCellClick, zoomIntent, primaryRef }
               depth={depth}
               loading={newLoading}
               onCellClick={handleCellClick}
+              onInsightClick={onInsightClick}
               focusSlot={oldSnap?.newZoom.from ?? null}
               gridRef={newGridRef}
               primaryRef={primaryRef}
