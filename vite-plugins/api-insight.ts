@@ -9,7 +9,7 @@ import { loadEnv, type Plugin } from 'vite';
 
 export function apiInsightProxy(): Plugin {
   let apiKey = '';
-  let model = 'claude-haiku-4-5-20251001';
+  let model = 'claude-sonnet-4-6';
 
   return {
     name: 'api-insight-dev-proxy',
@@ -20,7 +20,7 @@ export function apiInsightProxy(): Plugin {
         if (env[k] && !process.env[k]) process.env[k] = env[k];
       }
       apiKey = process.env.ANTHROPIC_API_KEY ?? env.ANTHROPIC_API_KEY ?? '';
-      model = process.env.ANTHROPIC_MODEL || env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
+      model = process.env.ANTHROPIC_MODEL || env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
     },
     configureServer(server) {
       server.middlewares.use('/api/insight', async (req, res) => {

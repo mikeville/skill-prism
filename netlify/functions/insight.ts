@@ -6,7 +6,7 @@
 import type { Handler } from '@netlify/functions';
 
 const API_KEY = process.env.ANTHROPIC_API_KEY;
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') return jsonResponse(405, { error: 'Method not allowed' });
