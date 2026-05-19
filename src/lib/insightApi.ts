@@ -2,16 +2,15 @@ import { buildInsightPrompt } from './insightPrompt';
 
 export type ResourceKind = 'book' | 'course' | 'person' | 'community' | 'site';
 
-export type InsightResource = {
-  title: string;
+export type InsightMove = {
   kind: ResourceKind;
-  note: string;
+  title: string;
+  action: string;
 };
 
 export type Insight = {
   framing: string;
-  resources: InsightResource[];
-  actions: string[];
+  moves: InsightMove[];
 };
 
 const VALID_KINDS: ReadonlySet<ResourceKind> = new Set([
@@ -56,7 +55,7 @@ function parseInsight(raw: string): Insight {
   const end = cleaned.lastIndexOf('}');
   if (start >= 0 && end > start) cleaned = cleaned.slice(start, end + 1);
 
-  let parsed: { framing?: unknown; resources?: unknown; actions?: unknown };
+  let parsed: { framing?: unknown; moves?: unknown };
   try {
     parsed = JSON.parse(cleaned);
   } catch {
@@ -65,28 +64,21 @@ function parseInsight(raw: string): Insight {
 
   const framing = typeof parsed.framing === 'string' ? parsed.framing.trim() : '';
 
-  const resources: InsightResource[] = Array.isArray(parsed.resources)
-    ? (parsed.resources as unknown[])
-        .map((r): InsightResource | null => {
-          if (!r || typeof r !== 'object') return null;
-          const obj = r as { title?: unknown; kind?: unknown; note?: unknown };
+  const moves: InsightMove[] = Array.isArray(parsed.moves)
+    ? (parsed.moves as unknown[])
+        .map((m): InsightMove | null => {
+          if (!m || typeof m !== 'object') return null;
+          const obj = m as { kind?: unknown; title?: unknown; action?: unknown };
           const title = typeof obj.title === 'string' ? obj.title.trim() : '';
-          const note = typeof obj.note === 'string' ? obj.note.trim() : '';
+          const action = typeof obj.action === 'string' ? obj.action.trim() : '';
           const kindRaw = typeof obj.kind === 'string' ? obj.kind.trim().toLowerCase() : '';
           const kind = (VALID_KINDS.has(kindRaw as ResourceKind) ? kindRaw : 'site') as ResourceKind;
-          if (!title) return null;
-          return { title, kind, note };
+          if (!title || !action) return null;
+          return { kind, title, action };
         })
-        .filter((r): r is InsightResource => r !== null)
-        .slice(0, 5)
-    : [];
-
-  const actions: string[] = Array.isArray(parsed.actions)
-    ? (parsed.actions as unknown[])
-        .map((a) => (typeof a === 'string' ? a.trim() : ''))
-        .filter(Boolean)
+        .filter((m): m is InsightMove => m !== null)
         .slice(0, 3)
     : [];
 
-  return { framing, resources, actions };
+  return { framing, moves };
 }

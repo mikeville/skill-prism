@@ -10,7 +10,12 @@ export function useContainerDepth(): {
   depth: 1 | 2;
 } {
   const [el, setEl] = useState<HTMLElement | null>(null);
-  const [depth, setDepth] = useState<1 | 2>(2);
+  // Seed from window width so the very first paint already matches the
+  // viewport — avoids a one-frame "desktop layout on a mobile device" flash
+  // before the ResizeObserver gets the container's clientWidth.
+  const [depth, setDepth] = useState<1 | 2>(() =>
+    typeof window !== 'undefined' && window.innerWidth > BREAKPOINT_PX ? 2 : 1,
+  );
 
   useEffect(() => {
     if (!el) return;

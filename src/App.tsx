@@ -3,21 +3,14 @@ import { EmptyState, type FirstRect } from './components/EmptyState/EmptyState';
 import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
 import type { ZoomIntent } from './components/FractalView/FractalView';
-import { InsightDrawer } from './components/Insight/InsightDrawer';
-import { InsightPanel } from './components/Insight/InsightPanel';
+import { InsightPane } from './components/Insight/InsightPane';
 import { Breadcrumb } from './components/Topbar/Breadcrumb';
 import { Topbar } from './components/Topbar/Topbar';
 import { ColorThemeProvider, useColorTheme } from './contexts/ColorTheme';
 import { TypeModeProvider } from './contexts/TypeMode';
 import { useBreakdown } from './hooks/useBreakdown';
-import { useContainerDepth } from './hooks/useContainerDepth';
 import { usePath } from './hooks/usePath';
 import { cacheGet } from './lib/cache';
-
-// TODO: dormant scaffolding — components/SkillSidebar/ and lib/exportSkill.ts
-// are implemented but not wired into the UI. Either wire them up (open the
-// sidebar from a Topbar button and feed it buildSkillMarkdown(path, data))
-// or delete them. Don't leave them indefinitely.
 
 const AdminPage = lazy(() =>
   import('./components/Admin/AdminPage').then((m) => ({ default: m.AdminPage })),
@@ -46,9 +39,11 @@ export default function App() {
   );
 }
 
-// All cells (corner + 3×3 + 9×9) share the viewport's aspect ratio when the
-// layout is full-bleed: corner_w / corner_h = V_w / V_h falls out of the geometry.
-// Track viewport aspect and expose it as --inner-aspect for corner widths.
+// Track the viewport's aspect ratio in a CSS variable so the desktop macro
+// grid's left/right corner columns can be sized `clamp × aspect`. This is
+// what makes the four macro-grid corner cells stay visually proportional to
+// the viewport as the user resizes the browser — the same "page margins
+// follow the viewport" trick the original implementation had.
 function useViewportAspect() {
   useEffect(() => {
     const update = () => {
@@ -65,73 +60,84 @@ function useViewportAspect() {
 
 const MORPH_MS = 360;
 const MORPH_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+const WIDE_LAYOUT_PX = 1024;
+
+function useIsWideLayout(): boolean {
+  const get = () => typeof window !== 'undefined' && window.innerWidth >= WIDE_LAYOUT_PX;
+  const [wide, setWide] = useState<boolean>(get);
+  useEffect(() => {
+    const update = () => setWide(get());
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return wide;
+}
+
+// Page-grid template values. Desktop uses the `clamp × aspect` trick on
+// columns so the four page-grid corner cells stay viewport-proportional;
+// mobile uses a smaller fixed clamp because the user explicitly opted out of
+// the proportional treatment for the narrow viewport.
+const PAGE_CORNER_CLAMP = 'clamp(48px, 6vmin, 72px)';
+const DESKTOP_GRID_ROWS = `${PAGE_CORNER_CLAMP} 1fr ${PAGE_CORNER_CLAMP}`;
+const DESKTOP_CORNER_COL = `calc(${PAGE_CORNER_CLAMP} * var(--inner-aspect, 1))`;
+const MOBILE_GRID_ROWS = 'auto auto auto';
+const MOBILE_GRID_COLS = 'clamp(16px, 3vmin, 24px) 1fr clamp(16px, 3vmin, 24px)';
+
+const INFO_PANEL_OPEN_PX = 420;
+const PANEL_ANIM_MS = 240;
+const PANEL_ANIM_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
 function AppInner() {
   const [path, setPath] = usePath();
   const { data, error } = useBreakdown(path);
-  const { ref: gridContainerRef, depth } = useContainerDepth();
   useViewportAspect();
   const { randomize: randomizeColor } = useColorTheme();
   const zoomIntent = useRef<ZoomIntent | null>(null);
   const prevPathLengthRef = useRef(0);
 
-  // FLIP source rect: the empty-state input wrapper's bounding box at submit
-  // time. Captured synchronously inside EmptyState's submit handler before
-  // setPath runs so the wrapper is still mounted.
   const morphFirstRectRef = useRef<FirstRect | null>(null);
-  // FLIP target ref: the depth=2 primary cell (desktop) or depth=1 standalone
-  // outer frame (mobile). Set by Cell/Level via callback ref on mount.
   const primaryCellRef = useRef<HTMLDivElement | null>(null);
-  // Mirror the ref into state so the mobile lattice effect re-runs when the
-  // primary cell node mounts/unmounts (raw refs don't trigger re-renders).
-  const [primaryCellEl, setPrimaryCellEl] = useState<HTMLDivElement | null>(null);
   const setPrimaryCellRef = useCallback((el: HTMLDivElement | null) => {
     primaryCellRef.current = el;
-    setPrimaryCellEl(el);
   }, []);
 
-  // Mobile-only lattice: the 3×3 grid's row/col divider positions, extended
-  // viewport-wide so the grid reads as part of a larger visual lattice rather
-  // than a floating box. We measure the standalone grid frame (which IS the
-  // primary cell ref target on mobile) and re-render the lines on resize.
-  type LatticeRect = { left: number; top: number; width: number; height: number };
-  const [latticeRect, setLatticeRect] = useState<LatticeRect | null>(null);
-  useEffect(() => {
-    if (!primaryCellEl || depth !== 1) {
-      setLatticeRect(null);
-      return;
-    }
-    const update = () => {
-      const r = primaryCellEl.getBoundingClientRect();
-      setLatticeRect({ left: r.left, top: r.top, width: r.width, height: r.height });
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(primaryCellEl);
-    window.addEventListener('resize', update);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', update);
-    };
-  }, [primaryCellEl, depth]);
-
   const inEmpty = path.length === 0;
-  const isMobile = depth === 1;
+  const isWide = useIsWideLayout();
+
+  // Desktop sidebar collapse state. Open by default. Toggled from a Topbar
+  // icon and from a CLOSE button inside the pane. State preserved across
+  // drills. When closed, the macro 3×3 grid takes the full viewport.
+  const [asideOpen, setAsideOpen] = useState<boolean>(true);
+  const toggleAside = useCallback(() => setAsideOpen((v) => !v), []);
+  const closeAside = useCallback(() => setAsideOpen(false), []);
+
+  // "Pinned" insight target: clicking the "i" icon on a non-focal cell scopes
+  // the desktop sidebar to that cell's term. Cleared on path change so
+  // subsequent drilling reverts the sidebar to the new focal.
+  const [pinnedTerm, setPinnedTerm] = useState<string | null>(null);
+  useEffect(() => {
+    setPinnedTerm(null);
+  }, [JSON.stringify(path)]);
+  const handleInsightClick = useCallback((term: string) => {
+    setPinnedTerm(term);
+    setAsideOpen(true);
+  }, []);
+
+  const focalTerm = path[path.length - 1] ?? '';
+  const insightTerm = pinnedTerm ?? focalTerm;
+  const insightContextPath = pinnedTerm ? path : path.slice(0, -1);
 
   const handleSubmit = (topic: string, firstRect: FirstRect | null) => {
     morphFirstRectRef.current = firstRect;
     zoomIntent.current = null;
-    // Each new search reveals a new palette. Drill-down clicks and manual
-    // picker selections don't trigger this; only fresh searches and initial
-    // empty-state page loads (handled in ColorTheme readInitialSet).
     randomizeColor();
     setPath([topic]);
   };
 
-  // Empty → active: run the FLIP morph on the new primary cell so it appears
-  // at the input wrapper's old position, then animates into its grid slot.
-  // Coordinated with perimeter fade-in and primary-cell text fade-in (queried
-  // by data-perimeter and selectors inside the cell).
+  // Empty → active morph (FLIP). Runs on the first transition out of empty
+  // state. The morph target is whatever cell carries `primaryRef` —
+  // depth=2's primary cell on desktop or the depth=1 standalone outer frame
+  // on mobile.
   useLayoutEffect(() => {
     const wasEmpty = prevPathLengthRef.current === 0;
     prevPathLengthRef.current = path.length;
@@ -148,7 +154,6 @@ function AppInner() {
     const sx = last.width === 0 ? 1 : first.width / last.width;
     const sy = last.height === 0 ? 1 : first.height / last.height;
 
-    // Box: FLIP from (first) back to (last) using transform.
     const boxAnim = target.animate(
       [
         {
@@ -163,10 +168,6 @@ function AppInner() {
       { duration: MORPH_MS, easing: MORPH_EASE, fill: 'backwards' },
     );
 
-    // Primary cell content (the topic text): the empty state had only a
-    // placeholder so the swap is otherwise jarring. Fade content in over the
-    // first half of the morph so the user reads "input → text inside the same
-    // box," not "input → small topic → grown topic."
     const contentEls = Array.from(target.children) as HTMLElement[];
     const contentAnims = contentEls.map((el) =>
       el.animate([{ opacity: 0 }, { opacity: 1 }], {
@@ -176,9 +177,6 @@ function AppInner() {
       }),
     );
 
-    // Perimeter blocks: fade in around the primary cell. Slight delay so the
-    // box has visibly started morphing first — reinforces "this IS the cell;
-    // the rest is context appearing around it."
     const perimeterEls = document.querySelectorAll<HTMLElement>('[data-perimeter]');
     const perimeterAnims = Array.from(perimeterEls).map((el) =>
       el.animate([{ opacity: 0 }, { opacity: 1 }], {
@@ -220,141 +218,189 @@ function AppInner() {
     setPath([]);
   };
 
-  // "Now what?" payoff state. Desktop: drawer for any clicked cell's term.
-  // Mobile: a bottom panel below renders insight for the focal term directly
-  // from `path`, no per-cell trigger.
-  const [insightTarget, setInsightTarget] = useState<{
-    path: string[];
-    term: string;
-  } | null>(null);
-  const handleInsightClick = useCallback(
-    (term: string) => {
-      // If the term IS the focal, treat the parent breadcrumb as context;
-      // otherwise the user is asking about a sibling/sub of the focal, so the
-      // current path is itself the context that led them there.
-      const isFocal = path.length > 0 && term === path[path.length - 1];
-      const parentPath = isFocal ? path.slice(0, -1) : path;
-      setInsightTarget({ path: parentPath, term });
-    },
-    [path],
-  );
-  const closeInsight = useCallback(() => setInsightTarget(null), []);
+  // ─── Empty state ────────────────────────────────────────────────────────
+  if (inEmpty) {
+    return (
+      <div className="fixed inset-0 bg-paper text-ink overflow-hidden">
+        <EmptyState onSubmit={handleSubmit} />
+      </div>
+    );
+  }
 
-  return (
-    <div className="fixed inset-0 bg-paper text-ink overflow-hidden">
-      {inEmpty && <EmptyState onSubmit={handleSubmit} />}
-      {!inEmpty && (
-        <div ref={gridContainerRef} className="absolute inset-0 flex flex-col">
-          {/* Desktop perimeter: top/bottom horizontals frame the FractalView's
-              padded area. Hidden on mobile because the new lattice (below)
-              draws lines at the grid's own top/bottom frame positions instead,
-              which leaves the topbar/breadcrumb area open. */}
-          {!isMobile && (
-            <>
-              <div
-                aria-hidden
-                data-perimeter
-                className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
-                style={{ top: 'clamp(48px, 6vmin, 72px)' }}
-              />
-              <div
-                aria-hidden
-                data-perimeter
-                className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
-                style={{ bottom: 'clamp(48px, 6vmin, 72px)' }}
-              />
-            </>
-          )}
-          <div
-            aria-hidden
-            data-perimeter
-            className="absolute top-0 bottom-0 w-px bg-line-meta pointer-events-none z-10"
-            style={{ left: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1))' }}
+  // ─── Mobile: macro 3×3 grid as a scrollable page. Top row is sticky. ──
+  if (!isWide) {
+    return (
+      <div
+        className="min-h-screen bg-line-meta text-ink grid gap-px"
+        style={{
+          gridTemplateColumns: MOBILE_GRID_COLS,
+          gridTemplateRows: MOBILE_GRID_ROWS,
+        }}
+      >
+        {/* Top row — sticky so the header stays as content scrolls under it.
+            box-shadow occupies the same 1-pixel slot as the macro grid's
+            row gap below the top row, so at scroll=0 it overlaps the gap
+            line (one visible line, not two); when the user scrolls, the
+            gap moves away with the grid and the shadow stays attached to
+            the sticky header — drawing the line that anchors it. */}
+        <div
+          className="bg-paper sticky top-0 z-30"
+          style={{ boxShadow: '0 1px 0 var(--c-line-meta)' }}
+        />
+        <div
+          data-perimeter
+          className="bg-paper sticky top-0 z-30"
+          style={{ boxShadow: '0 1px 0 var(--c-line-meta)' }}
+        >
+          <Topbar
+            path={path}
+            onJump={handleJump}
+            onReset={handleReset}
+            data={data}
+            hideBreadcrumb
           />
-          <div
-            aria-hidden
-            data-perimeter
-            className="absolute top-0 bottom-0 w-px bg-line-meta pointer-events-none z-10"
-            style={{ right: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1))' }}
-          />
-          {/* Mobile lattice: only the OUTER edges of the 3×3 are extended out
-              past the grid frame into the surrounding margin. Inner column/
-              row dividers stay contained within the grid. The existing left/
-              right perimeter verticals above already coincide with the grid's
-              left/right frame, so the only new lines we add here are the
-              extended top and bottom edges. */}
-          {isMobile && latticeRect && (
-            <>
-              <div
-                aria-hidden
-                data-perimeter
-                className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
-                style={{ top: latticeRect.top }}
-              />
-              <div
-                aria-hidden
-                data-perimeter
-                className="absolute left-0 right-0 h-px bg-line-meta pointer-events-none z-10"
-                style={{ top: latticeRect.top + latticeRect.height - 1 }}
-              />
-            </>
-          )}
-          {/* Mobile-only breadcrumb row: sits just above the grid's top edge.
-              Bottom-aligned (not centered) within the gap so it visually
-              anchors to the top grid line, with a small breathing gap above
-              the line. On desktop the breadcrumb still lives inside the
-              Topbar's center column. */}
-          {isMobile && path.length >= 2 && latticeRect && (
-            <div
-              data-perimeter
-              className="absolute left-0 right-0 z-20 flex items-end justify-center text-meta font-meta pb-3"
-              style={{
-                top: 'clamp(48px, 6vmin, 72px)',
-                height: `calc(${latticeRect.top}px - clamp(48px, 6vmin, 72px))`,
-                paddingLeft: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
-                paddingRight: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
-              }}
-            >
+          {/* Breadcrumb row is always rendered so the header height stays
+              constant whether the user is at depth=1 (no crumbs to show)
+              or depth>=2. Empty state uses a non-breaking space to reserve
+              the line. */}
+          <div className="px-4 pb-2 -mt-1 flex items-center justify-center text-meta font-meta">
+            {path.length >= 2 ? (
               <Breadcrumb path={path} onJump={handleJump} allInk />
-            </div>
-          )}
-          <div data-perimeter>
-            <Topbar
-              path={path}
-              onJump={handleJump}
-              onReset={handleReset}
-              data={data}
-              hideBreadcrumb={isMobile}
-            />
+            ) : (
+              <span aria-hidden className="invisible">
+                &nbsp;
+              </span>
+            )}
           </div>
-          <div className="relative flex-1 min-h-0">
+        </div>
+        <div
+          className="bg-paper sticky top-0 z-30"
+          style={{ boxShadow: '0 1px 0 var(--c-line-meta)' }}
+        />
+
+        {/* Middle row — fractal in middle, empty side margins. */}
+        <div className="bg-paper" />
+        <div className="bg-paper relative">
+          <div
+            className="w-full mx-auto"
+            style={{
+              aspectRatio: '3 / 4',
+              maxWidth: 'min(100%, calc(100vh - 220px) * 3 / 4)',
+            }}
+          >
             <FractalView
               data={data}
-              depth={depth}
+              depth={1}
               onCellClick={handleCellClick}
-              onInsightClick={isMobile ? undefined : handleInsightClick}
+              onInsightClick={undefined}
               zoomIntent={zoomIntent}
               primaryRef={setPrimaryCellRef}
             />
-            {error && (
-              <div className="absolute bottom-4 left-8 bg-paper border-cell border-ink px-2 py-1 text-meta font-meta">
-                {error}
-              </div>
-            )}
           </div>
-          {/* Desktop drawer — per-cell insight on demand. */}
-          {!isMobile && (
-            <InsightDrawer
-              open={insightTarget !== null}
-              onClose={closeInsight}
-              path={insightTarget?.path ?? []}
-              term={insightTarget?.term ?? null}
+          {error && (
+            <div className="mt-2 bg-paper border-cell border-ink px-2 py-1 text-meta font-meta">
+              {error}
+            </div>
+          )}
+        </div>
+        <div className="bg-paper" />
+
+        {/* Bottom row — info pane in middle, empty side margins. */}
+        <div className="bg-paper" />
+        <div className="bg-paper">
+          {focalTerm && (
+            <InsightPane term={focalTerm} path={path.slice(0, -1)} />
+          )}
+        </div>
+        <div className="bg-paper" />
+      </div>
+    );
+  }
+
+  // ─── Desktop: a single 3×3 page grid that contains everything — header in
+  //     top-middle, content grid in middle-middle, info panel in middle-right.
+  //     The right column animates between `clamp × aspect` (panel closed,
+  //     mirrors the left column for symmetric viewport-proportional corners)
+  //     and the wider INFO_PANEL_OPEN_PX (panel open). The panel content lives
+  //     inside the cell and scrolls vertically; the cell clips horizontally
+  //     during the animation so the panel "wipes" in/out from the right.
+  const desktopRightCol = asideOpen
+    ? `${INFO_PANEL_OPEN_PX}px`
+    : DESKTOP_CORNER_COL;
+  const desktopGridCols = `${DESKTOP_CORNER_COL} 1fr ${desktopRightCol}`;
+  return (
+    <div
+      className="fixed inset-0 bg-line-meta text-ink overflow-hidden grid gap-px"
+      style={{
+        gridTemplateColumns: desktopGridCols,
+        gridTemplateRows: DESKTOP_GRID_ROWS,
+        transition: `grid-template-columns ${PANEL_ANIM_MS}ms ${PANEL_ANIM_EASE}`,
+      }}
+    >
+      {/* Top row */}
+      <div className="bg-paper" />
+      <div data-perimeter className="bg-paper">
+        <Topbar
+          path={path}
+          onJump={handleJump}
+          onReset={handleReset}
+          data={data}
+          hideBreadcrumb={false}
+          onToggleAside={toggleAside}
+          asideOpen={asideOpen}
+        />
+      </div>
+      <div className="bg-paper" />
+
+      {/* Middle row */}
+      <div className="bg-paper" />
+      <div className="bg-paper relative">
+        <FractalView
+          data={data}
+          depth={2}
+          onCellClick={handleCellClick}
+          onInsightClick={handleInsightClick}
+          zoomIntent={zoomIntent}
+          primaryRef={setPrimaryCellRef}
+        />
+        {error && (
+          <div className="absolute bottom-4 left-8 bg-paper border-cell border-ink px-2 py-1 text-meta font-meta">
+            {error}
+          </div>
+        )}
+      </div>
+      {/* Info panel cell. The cell itself clips horizontal overflow during
+          the column-width animation; the inner div keeps its natural width
+          (INFO_PANEL_OPEN_PX) so the panel content doesn't reflow as the cell
+          shrinks/grows. We also fade the inner div on the same timing so the
+          cell visually empties — without the fade you'd see the left ~86px
+          of panel content peeking out of the collapsed corner column.
+          Vertical scroll lives on the inner div so longer payloads remain
+          reachable when the cell is shorter than the content. */}
+      <div className="bg-paper overflow-hidden">
+        <div
+          className="h-full overflow-y-auto"
+          style={{
+            width: `${INFO_PANEL_OPEN_PX}px`,
+            opacity: asideOpen ? 1 : 0,
+            pointerEvents: asideOpen ? 'auto' : 'none',
+            transition: `opacity ${PANEL_ANIM_MS}ms ${PANEL_ANIM_EASE}`,
+          }}
+        >
+          {insightTerm && (
+            <InsightPane
+              term={insightTerm}
+              path={insightContextPath}
+              onClose={closeAside}
             />
           )}
-          {/* Mobile panel — always-visible, locked to the focal term. */}
-          {isMobile && <InsightPanel path={path} />}
         </div>
-      )}
+      </div>
+
+      {/* Bottom row */}
+      <div className="bg-paper" />
+      <div className="bg-paper" />
+      <div className="bg-paper" />
     </div>
   );
 }

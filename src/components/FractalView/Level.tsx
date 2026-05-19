@@ -69,7 +69,7 @@ export function Level({
     return (
       <div
         ref={gridRef}
-        className="grid gap-px p-px w-full h-full bg-line-meta overflow-hidden"
+        className="grid gap-px w-full h-full bg-line-meta overflow-hidden"
         style={gridStyle}
       >
         {SLOTS.map((slot) => {
@@ -215,21 +215,19 @@ export function Level({
 
   if (!standalone) return innerGrid;
 
-  // Mobile single-grid: dark outer frame matching desktop's outer-3×3 frame.
-  // This wrapper is the morph target on mobile (the empty-state input grows
-  // into this entire frame, then the inner 3×3 fades in inside it).
-  //
-  // Forced 3:4 portrait aspect on mobile (was: w-full h-full which gave very
-  // tall ~9:21 cells). Each cell ends up ~3:4 too — still portrait but far
-  // less extreme — which makes typography easier to fit and improves cross-
-  // cell cap/baseline alignment. The grid is centered in the available
-  // vertical space via the flex wrapper.
+  // Mobile single-grid (depth=1 standalone). The outer frame around the 3×3
+  // is now provided by the App's macro 3×3 grid (the gap-px + bg-line-meta
+  // parent that surrounds the middle-middle cell), so we no longer need our
+  // own bg-line-meta + p-px wrapper here — keeping it would render a second
+  // 1px frame and produce the "double border" the user called out. The
+  // wrapper still exists for: (a) the FLIP morph target on mobile, (b)
+  // enforcing the 3:4 aspect ratio that makes mobile cells more readable.
   return (
     <div className="w-full h-full flex items-center justify-center">
       <div
         ref={primaryRef}
-        className="bg-line-meta p-px overflow-hidden"
-        style={{ aspectRatio: '3 / 4', width: '100%', maxHeight: '100%' }}
+        className="overflow-hidden w-full h-full"
+        style={{ aspectRatio: '3 / 4', maxHeight: '100%' }}
       >
         {innerGrid}
       </div>

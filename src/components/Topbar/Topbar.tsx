@@ -22,21 +22,31 @@ type Props = {
   // in the empty space above the grid (see App.tsx) — pass true there so the
   // topbar doesn't render its own copy.
   hideBreadcrumb?: boolean;
+  // Desktop only: when provided, shows a panel-toggle icon next to Export.
+  // `asideOpen` drives the icon's visual state (filled right slot when open).
+  onToggleAside?: () => void;
+  asideOpen?: boolean;
 };
 
-export function Topbar({ path, onJump, onReset, data, hideBreadcrumb }: Props) {
+export function Topbar({
+  path,
+  onJump,
+  onReset,
+  data,
+  hideBreadcrumb,
+  onToggleAside,
+  asideOpen,
+}: Props) {
   const { mode, toggle } = useTypeMode();
   const poster = mode === 'poster';
   const showCrumbs = path.length >= 2 && !hideBreadcrumb;
 
   return (
     <div
-      className="grid items-center shrink-0"
+      className="grid items-center shrink-0 px-4 md:px-6"
       style={{
         height: 'clamp(48px, 6vmin, 72px)',
         gridTemplateColumns: '1fr auto 1fr',
-        paddingLeft: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
-        paddingRight: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1) + 1rem)',
       }}
     >
       {/* Entrance animation lives on this wrapper, not the button. The
@@ -88,6 +98,33 @@ export function Topbar({ path, onJump, onReset, data, hideBreadcrumb }: Props) {
         </button>
         <ColorPicker />
         <ExportButton data={data} topic={path[path.length - 1] ?? ''} />
+        {onToggleAside && (
+          <button
+            type="button"
+            onClick={onToggleAside}
+            aria-pressed={asideOpen}
+            aria-label={asideOpen ? 'HIDE INSIGHT PANEL' : 'SHOW INSIGHT PANEL'}
+            title={asideOpen ? 'HIDE INSIGHT PANEL' : 'SHOW INSIGHT PANEL'}
+            className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring leading-none flex items-center justify-center h-6"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.25"
+              aria-hidden
+            >
+              <rect x="0.5" y="2" width="13" height="10" />
+              {asideOpen ? (
+                <rect x="9" y="2" width="5" height="10" fill="currentColor" stroke="none" />
+              ) : (
+                <line x1="9" y1="2" x2="9" y2="12" />
+              )}
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

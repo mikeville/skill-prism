@@ -301,7 +301,7 @@ export function Cell({
           }}
           onMouseDown={(e) => e.stopPropagation()}
           aria-label={content ? `Get insight on ${content}` : 'Get insight'}
-          className="hidden md:flex absolute top-1.5 right-1.5 w-5 h-5 items-center justify-center text-meta font-meta text-ink-mut bg-paper border border-line-meta opacity-0 group-hover:opacity-100 transition-opacity duration-hover hover:text-ink hover:border-ink focus-ring z-10"
+          className="flex absolute top-1.5 right-1.5 w-5 h-5 items-center justify-center text-meta font-meta text-ink-mut bg-paper border border-line-meta opacity-0 group-hover:opacity-100 transition-opacity duration-hover hover:text-ink hover:border-ink focus-ring z-10"
         >
           i
         </button>

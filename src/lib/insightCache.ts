@@ -1,21 +1,25 @@
 // LocalStorage-backed cache for /api/insight results. Per-user, per-browser.
-// Schema-versioned via the prefix. Keyed by (path, term) so the same term
-// reached via different drill paths is cached separately — unlike the breakdown
-// cache, the path provides meaningful framing context here.
+// Schema-versioned via the prefix.
+//
+// Keyed by the TERM alone (normalized), not by (path, term). This mirrors the
+// breakdown cache's strategy: revisiting a term from a different drill path
+// reuses the same entry. The result is that drilling into a term whose info
+// panel is already open is free — no re-fetch — and tokens are spent once per
+// distinct term across a user's session.
+//
+// v2 bumps the schema to drop the old (path, term) keys (different shape).
 
 import type { Insight } from './insightApi';
 
-const PREFIX = 'skill-prism:insight:v1:';
+const PREFIX = 'skill-prism:insight:v2:';
 
-function insightKey(path: string[], term: string): string {
-  const normPath = path.map((p) => p.toLowerCase().trim()).join('›');
-  const normTerm = term.toLowerCase().trim();
-  return `${normPath}∷${normTerm}`;
+function insightKey(term: string): string {
+  return term.toLowerCase().trim();
 }
 
-export function insightCacheGet(path: string[], term: string): Insight | null {
-  const key = insightKey(path, term);
-  if (!key || key === '∷') return null;
+export function insightCacheGet(term: string): Insight | null {
+  const key = insightKey(term);
+  if (!key) return null;
   try {
     const raw = localStorage.getItem(PREFIX + key);
     if (!raw) return null;
@@ -23,8 +27,7 @@ export function insightCacheGet(path: string[], term: string): Insight | null {
     if (
       !parsed ||
       typeof parsed.framing !== 'string' ||
-      !Array.isArray(parsed.resources) ||
-      !Array.isArray(parsed.actions)
+      !Array.isArray(parsed.moves)
     ) {
       return null;
     }
@@ -34,9 +37,9 @@ export function insightCacheGet(path: string[], term: string): Insight | null {
   }
 }
 
-export function insightCacheSet(path: string[], term: string, value: Insight): void {
-  const key = insightKey(path, term);
-  if (!key || key === '∷') return;
+export function insightCacheSet(term: string, value: Insight): void {
+  const key = insightKey(term);
+  if (!key) return;
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch {

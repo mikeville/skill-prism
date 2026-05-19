@@ -1,6 +1,6 @@
-// Owns the data state for a (path, term) pair: cache lookup → API call →
-// stale-request guard. Mirrors useBreakdown's shape so the consumers feel
-// familiar.
+// Owns the data state for an insight target (path, term): cache lookup → API
+// call → stale-request guard. Cache is keyed by term alone, so revisiting a
+// term via a different path is free.
 
 import { useEffect, useRef, useState } from 'react';
 import { fetchInsight, type Insight } from '../lib/insightApi';
@@ -22,7 +22,7 @@ export function useInsight(
   const reqIdRef = useRef(0);
 
   useEffect(() => {
-    if (!term || !path) {
+    if (!term) {
       reqIdRef.current++;
       setInsight(null);
       setLoading(false);
@@ -30,7 +30,7 @@ export function useInsight(
       return;
     }
 
-    const cached = insightCacheGet(path, term);
+    const cached = insightCacheGet(term);
     if (cached) {
       reqIdRef.current++;
       setInsight(cached);
@@ -46,9 +46,9 @@ export function useInsight(
 
     (async () => {
       try {
-        const out = await fetchInsight({ path, term });
+        const out = await fetchInsight({ path: path ?? [], term });
         if (reqIdRef.current !== reqId) return;
-        insightCacheSet(path, term, out);
+        insightCacheSet(term, out);
         setInsight(out);
       } catch (e) {
         if (reqIdRef.current !== reqId) return;
@@ -57,7 +57,7 @@ export function useInsight(
         if (reqIdRef.current === reqId) setLoading(false);
       }
     })();
-  }, [JSON.stringify(path), term]);
+  }, [term]);
 
   return { insight, loading, error };
 }

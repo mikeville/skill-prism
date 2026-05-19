@@ -6,7 +6,11 @@ type Props = {
   loading: boolean;
   error: string | null;
   onRetry?: () => void;
-  // Compact layout: smaller padding + tighter spacing for the mobile bottom panel.
+  // Desktop only: dismiss handler. Renders a CLOSE button next to TO MASTER
+  // so the user always has a clear way to collapse the panel from inside it.
+  onClose?: () => void;
+  // Compact: smaller padding for tighter contexts (currently unused in the
+  // new always-visible layout, but kept for future flexibility).
   compact?: boolean;
 };
 
@@ -18,18 +22,55 @@ const KIND_LABEL: Record<ResourceKind, string> = {
   site: 'SITE',
 };
 
-export function InsightContent({ term, insight, loading, error, onRetry, compact }: Props) {
-  const pad = compact ? 'px-4 py-3' : 'p-6';
-  const gap = compact ? 'gap-3' : 'gap-5';
-  const sectionGap = compact ? 'gap-1.5' : 'gap-2';
+// Body-copy style for prose inside the panel. Conventional readable axes for
+// Anybody Variable: width 100 (normal), weight 400 (regular). Combined with
+// `normal-case` to opt out of the global uppercase rule.
+const PROSE_STYLE: React.CSSProperties = {
+  fontVariationSettings: '"wdth" 100, "wght" 400',
+  lineHeight: 1.5,
+};
+
+const PROSE_CLASS = 'normal-case text-ink';
+
+export function InsightContent({
+  term,
+  insight,
+  loading,
+  error,
+  onRetry,
+  onClose,
+  compact,
+}: Props) {
+  const pad = compact ? 'px-4 py-4' : 'px-6 py-6';
+  const sectionGap = 'gap-5';
 
   return (
-    <div className={`flex flex-col ${gap} ${pad}`}>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-meta font-meta text-ink-mut">WHAT NOW</span>
-        <span className="text-meta font-meta text-ink truncate" title={term}>
+    <div className={`flex flex-col ${sectionGap} ${pad}`}>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-meta font-meta text-ink-mut">TO MASTER</span>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring"
+              aria-label="Close insight panel"
+            >
+              CLOSE
+            </button>
+          )}
+        </div>
+        <h2
+          className="text-ink normal-case"
+          style={{
+            ...PROSE_STYLE,
+            fontSize: '20px',
+            lineHeight: 1.2,
+            fontVariationSettings: '"wdth" 100, "wght" 600',
+          }}
+        >
           {term}
-        </span>
+        </h2>
       </div>
 
       {loading && (
@@ -41,7 +82,7 @@ export function InsightContent({ term, insight, loading, error, onRetry, compact
       )}
 
       {error && !loading && (
-        <div className={`flex flex-col ${sectionGap}`}>
+        <div className="flex flex-col gap-2">
           <p className="text-meta font-meta text-ink">COULDN'T LOAD</p>
           {onRetry && (
             <button
@@ -58,48 +99,50 @@ export function InsightContent({ term, insight, loading, error, onRetry, compact
       {insight && !loading && !error && (
         <>
           {insight.framing && (
-            <p className="text-meta font-meta text-ink leading-relaxed normal-case">
+            <p
+              className={`${PROSE_CLASS}`}
+              style={{ ...PROSE_STYLE, fontSize: '15px' }}
+            >
               {insight.framing}
             </p>
           )}
 
-          {insight.resources.length > 0 && (
-            <div className={`flex flex-col ${sectionGap}`}>
-              <span className="text-meta font-meta text-ink-mut">RESOURCES</span>
-              <ul className="flex flex-col gap-2">
-                {insight.resources.map((r, i) => (
-                  <li key={i} className="flex flex-col gap-0.5">
-                    <div className="flex items-baseline gap-2">
+          {insight.moves.length > 0 && (
+            <ol className="flex flex-col gap-5">
+              {insight.moves.map((m, i) => (
+                <li key={i} className="flex gap-3">
+                  <span
+                    className="text-meta font-meta text-ink-mut shrink-0 pt-0.5"
+                    aria-hidden
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="text-meta font-meta text-ink-mut shrink-0">
-                        {KIND_LABEL[r.kind]}
+                        {KIND_LABEL[m.kind]}
                       </span>
-                      <span className="text-meta font-meta text-ink">{r.title}</span>
+                      <span
+                        className={`${PROSE_CLASS} font-semibold`}
+                        style={{
+                          ...PROSE_STYLE,
+                          fontSize: '15px',
+                          fontVariationSettings: '"wdth" 100, "wght" 600',
+                        }}
+                      >
+                        {m.title}
+                      </span>
                     </div>
-                    {r.note && (
-                      <p className="text-meta font-meta text-ink-mut normal-case leading-snug">
-                        {r.note}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {insight.actions.length > 0 && (
-            <div className={`flex flex-col ${sectionGap}`}>
-              <span className="text-meta font-meta text-ink-mut">FIRST MOVES</span>
-              <ol className="flex flex-col gap-1.5">
-                {insight.actions.map((a, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="text-meta font-meta text-ink-mut shrink-0">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <span className="text-meta font-meta text-ink">{a}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+                    <p
+                      className={PROSE_CLASS}
+                      style={{ ...PROSE_STYLE, fontSize: '14px' }}
+                    >
+                      {m.action}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           )}
         </>
       )}

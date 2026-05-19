@@ -235,15 +235,7 @@ export function FractalView({
 
   return (
     <AnimatingProvider value={animatingCtx}>
-      <div
-        className="relative w-full h-full box-border"
-        style={{
-          paddingTop: 0,
-          paddingBottom: 'clamp(48px, 6vmin, 72px)',
-          paddingLeft: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1))',
-          paddingRight: 'calc(clamp(48px, 6vmin, 72px) * var(--inner-aspect, 1))',
-        }}
-      >
+      <div className="relative w-full h-full box-border">
         <div className="relative w-full h-full">
           {oldSnap && (
             <div ref={oldLayerRef} className="absolute inset-0 pointer-events-none">
