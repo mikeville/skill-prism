@@ -167,9 +167,13 @@ async function fetchGeneration({
   return parseInsight(text);
 }
 
-// Consumes Anthropic's SSE response from /api/insight and returns the full
-// accumulated completion text. Invokes onText after every text delta with
-// the running accumulated string.
+// Consumes /api/insight and returns the full completion text. Prefers SSE
+// (Anthropic's streaming format passed through by the proxy) — invoking onText
+// after every text delta — but transparently falls back to non-streaming
+// `{ completion }` JSON when the server doesn't stream (production Netlify
+// Functions don't support streaming; only dev/edge runtimes do). The fallback
+// keeps the insight pane functional everywhere; the only thing it loses on
+// non-streaming hosts is the progressive partial-render UX.
 async function streamCompletion(
   prompt: string,
   onText: (accumulated: string) => void,
@@ -184,41 +188,68 @@ async function streamCompletion(
     throw new Error(errBody.error || `API error (${r.status})`);
   }
 
+  // Decide ahead of time which path to take. text/event-stream is the only
+  // signal that SSE parsing will actually find events; anything else (most
+  // commonly application/json) means we should treat the body as a complete
+  // { completion } payload.
+  const isSse = (r.headers.get('content-type') || '').toLowerCase().includes('text/event-stream');
+
   const reader = r.body.getReader();
   const decoder = new TextDecoder();
   let accumulated = '';
   let sseBuf = '';
+  let rawBody = '';
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    sseBuf += decoder.decode(value, { stream: true });
-    // SSE events are separated by `\n\n`. Each event has one or more
-    // `key: value` lines. We only care about `data: <json>`.
-    let sepIdx = sseBuf.indexOf('\n\n');
-    while (sepIdx >= 0) {
-      const eventBlock = sseBuf.slice(0, sepIdx);
-      sseBuf = sseBuf.slice(sepIdx + 2);
-      for (const line of eventBlock.split('\n')) {
-        if (!line.startsWith('data: ')) continue;
-        const dataStr = line.slice(6);
-        try {
-          const data = JSON.parse(dataStr) as {
-            type?: string;
-            delta?: { type?: string; text?: string };
-          };
-          if (data.type === 'content_block_delta' && data.delta?.type === 'text_delta' && typeof data.delta.text === 'string') {
-            accumulated += data.delta.text;
-            onText(accumulated);
+    const chunk = decoder.decode(value, { stream: true });
+    if (isSse) {
+      sseBuf += chunk;
+      // SSE events are separated by `\n\n`. Each event has one or more
+      // `key: value` lines. We only care about `data: <json>`.
+      let sepIdx = sseBuf.indexOf('\n\n');
+      while (sepIdx >= 0) {
+        const eventBlock = sseBuf.slice(0, sepIdx);
+        sseBuf = sseBuf.slice(sepIdx + 2);
+        for (const line of eventBlock.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          const dataStr = line.slice(6);
+          try {
+            const data = JSON.parse(dataStr) as {
+              type?: string;
+              delta?: { type?: string; text?: string };
+            };
+            if (data.type === 'content_block_delta' && data.delta?.type === 'text_delta' && typeof data.delta.text === 'string') {
+              accumulated += data.delta.text;
+              onText(accumulated);
+            }
+          } catch {
+            // Ignore non-JSON SSE lines (heartbeats, etc.)
           }
-        } catch {
-          // Ignore non-JSON SSE lines (heartbeats, etc.)
         }
+        sepIdx = sseBuf.indexOf('\n\n');
       }
-      sepIdx = sseBuf.indexOf('\n\n');
+    } else {
+      rawBody += chunk;
     }
   }
-  return accumulated;
+
+  if (isSse) return accumulated;
+
+  // Non-streaming server. Parse the buffered body as the proxy's standard
+  // `{ completion }` envelope and surface it to onText so the InsightContent
+  // still sees a partial before parseInsight finalizes — same code path as
+  // the streaming "everything arrived at once" case.
+  try {
+    const data = JSON.parse(rawBody) as { completion?: string; error?: string };
+    if (data.error) throw new Error(data.error);
+    const completion = typeof data.completion === 'string' ? data.completion : '';
+    if (completion) onText(completion);
+    return completion;
+  } catch (e) {
+    throw e instanceof Error ? e : new Error('Could not parse insight response.');
+  }
 }
 
 // Progressive parser that extracts whatever's parseable from an in-flight
