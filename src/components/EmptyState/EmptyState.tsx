@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { selectRandomExamples } from '../../data/examples';
 import { useGridDimensions } from '../../hooks/useGridDimensions';
+import { ANYBODY } from '../../lib/fontConfig';
 
 export type FirstRect = { top: number; left: number; width: number; height: number };
 
@@ -42,6 +43,7 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
         style={{
           height: 'clamp(48px, 6vmin, 72px)',
           // Tweak the weight here. Anybody axis range: wght 100–900.
+          fontFamily: ANYBODY.family,
           fontVariationSettings: '"wdth" 100, "wght" 600',
         }}
       >

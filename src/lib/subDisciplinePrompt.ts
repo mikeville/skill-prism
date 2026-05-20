@@ -38,7 +38,7 @@ GUIDANCE for adjacent_disciplines:
   - For "editorial design": "typography" is adjacent — typography books like type-and-letterforms references commonly get recommended for editorial design even though their primary subject is typography, not editorial design.
   - For "frontend engineering": "JavaScript" (the language) is adjacent — JS language books commonly get recommended for frontend engineering even though frontend engineering is the broader discipline.
 
-Use the names practitioners actually use. Lowercased plain prose.
+Use the names practitioners actually use.
 
 Calibration examples (illustrating the task, not a closed list):
 - "graphic design" → { "sub_disciplines": ["typography", "logo design", "editorial design", "brand identity", "packaging design"], "adjacent_disciplines": [] }

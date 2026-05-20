@@ -49,12 +49,12 @@ Reject any candidate whose primary subject is one of the trap areas above. Three
 
 Schema:
 {
-  "framing": "ONE SENTENCE naming what mastery of this term actually requires you to grasp — a stance, distinction, or non-obvious truth that frames the WHY behind the moves that follow. Plain lowercased prose. Not a definition.",
+  "framing": "ONE SENTENCE naming what mastery of this term actually requires you to grasp — a stance, distinction, or non-obvious truth that frames the WHY behind the moves that follow. Plain sentence-case prose. Not a definition.",
   "moves": [
     {
       "kind": "book" | "course" | "person" | "site",
       "title": "Name of the resource the move pivots around.",
-      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice), describing what to do and the payoff. Plain lowercased prose. Be brief.",
+      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice), describing what to do and the payoff. Plain sentence-case prose. Be brief.",
       "url": "Canonical URL — see URL rules below. OMIT this field entirely if you are not confident in the exact URL."
     }
   ]
@@ -95,7 +95,7 @@ KIND GUIDANCE:
 - "site": EQUAL FIRST-CLASS OPTION (not a fallback). Canonical evergreen sites, blogs, newsletters, or podcasts that a working practitioner of THIS topic genuinely uses. Not landing pages, not generic homepages. When a great site exists for this topic, include it on its merits — no preference for book/course/person over site.
 
 FRAMING:
-- MAX ~22 words. Plain lowercased prose. Not a summary of what the term is. Tell the reader what mastery of this topic asks them to see, accept, or hold in tension.
+- MAX ~22 words. Plain sentence-case prose. Not a summary of what the term is. Tell the reader what mastery of this topic asks them to see, accept, or hold in tension.
 
 TONE:
 - Direct and unfussy. No marketing voice. No "leverage", "unlock", "journey", "dive in". No emoji. No URLs anywhere. No publication years.

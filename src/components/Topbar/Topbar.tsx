@@ -64,7 +64,9 @@ export function Topbar({
           className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring"
           style={{
             // Match the EmptyState SKILL PRISM weight so the handoff stays visually consistent.
-            fontVariationSettings: '"wdth" 100, "wght" 600',
+            fontFamily: ANYBODY.family,
+            fontSize: '12px',
+            fontVariationSettings: '"wdth" 100, "wght" 800',
           }}
         >
           SKILL PRISM

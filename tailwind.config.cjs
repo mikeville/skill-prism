@@ -14,11 +14,13 @@ module.exports = {
       'line-cell': 'var(--c-line-cell)',
     },
     fontFamily: {
-      // Anybody is the only font in use across the app — same family for body
-      // copy, UI labels, and grid display text. Static UI weights are set via
-      // font-variation-settings (see globals.css body); display-mode grid text
-      // sets its own variation settings inline.
-      sans: ['"Anybody Variable"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+      // Inter is the default for UI chrome, body copy, and the insight pane.
+      // Anybody is applied inline at its two homes — grid cell display text
+      // (both poster and plain modes, via ANYBODY.family) and the SKILL PRISM
+      // wordmark (Topbar + EmptyState). Static UI weights are set via
+      // font-variation-settings (see globals.css body); display-mode grid
+      // text sets its own variation settings inline.
+      sans: ['"Inter Variable"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
       mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
     },
     fontSize: {

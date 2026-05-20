@@ -60,7 +60,7 @@ Respond with ONLY valid JSON, no preamble, no markdown fences:
 {
   "framing": "${candidate.framing.replace(/"/g, '\\"')}",
   "moves": [
-    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "ONE TERSE SENTENCE — max 15 words — imperative voice, lowercased.", "url": "OPTIONAL — see url rules below" },
+    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "ONE TERSE SENTENCE — max 15 words — imperative voice, sentence case.", "url": "OPTIONAL — see url rules below" },
     { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "...", "url": "..." },
     { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "...", "url": "..." }
   ]

@@ -363,6 +363,7 @@ export function Cell({
             data-fit-tier={fitTierFor(tier, compact)}
             data-fit-mode="plain"
             className="flex flex-col items-stretch justify-center w-full h-full uppercase"
+            style={{ fontFamily: font.family }}
           >
             {lines.map((line, i) => {
               const isFirst = i === 0;
