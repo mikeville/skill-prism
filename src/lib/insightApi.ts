@@ -1,5 +1,6 @@
 import { buildInsightPrompt } from './insightPrompt';
 import { buildSubDisciplinePrompt } from './subDisciplinePrompt';
+import { buildCritiquePrompt } from './critiquePrompt';
 
 export type ResourceKind = 'book' | 'course' | 'person' | 'community' | 'site';
 
@@ -39,25 +40,46 @@ export async function fetchInsight({
   // Stage 1: classify scope traps for this topic — sub-disciplines (narrower
   // practice areas within) and adjacent disciplines (sibling fields whose
   // canonical resources commonly get mistaken for this topic's). Both lists
-  // are injected into the main prompt as anti-targets. On any failure, fall
-  // through with empty lists — the main prompt is still functional without
-  // anti-targets.
+  // are injected into stages 2 and 3 as anti-targets. On any failure, fall
+  // through with empty lists — later stages are still functional.
   const traps = await fetchScopeTraps({ term }).catch(() => EMPTY_TRAPS);
 
-  // Stage 2: generate moves with scope-trap lists injected as anti-targets.
+  // Stage 2: generate initial 3 moves with scope-trap lists as anti-targets.
+  const initial = await fetchGeneration({ path, term, traps });
+
+  // Stage 3: adversarial critique. The generation pass can rationalize wrong-
+  // scope picks ("foundational", "principles transfer", "practitioners use
+  // this") that no in-prompt rule reliably catches. A separate pass framed as
+  // an EDITOR auditing the generation gets a fresh forward pass with no
+  // generation-side priors — different cognitive frame, different blind
+  // spots. On any failure, fall back to the generation output.
+  const corrected = await fetchCritique({ term, traps, candidate: initial }).catch(
+    () => initial,
+  );
+
+  return corrected;
+}
+
+async function fetchGeneration({
+  path,
+  term,
+  traps,
+}: {
+  path: string[];
+  term: string;
+  traps: ScopeTraps;
+}): Promise<Insight> {
   const prompt = buildInsightPrompt({
     path,
     term,
     subDisciplines: traps.subDisciplines,
     adjacentDisciplines: traps.adjacentDisciplines,
   });
-
   const r = await fetch('api/insight', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ prompt }),
   });
-
   const body = (await r.json().catch(() => ({}))) as {
     completion?: string;
     error?: string;
@@ -66,6 +88,44 @@ export async function fetchInsight({
     throw new Error(body.error || `API error (${r.status})`);
   }
   return parseInsight(body.completion ?? '');
+}
+
+async function fetchCritique({
+  term,
+  traps,
+  candidate,
+}: {
+  term: string;
+  traps: ScopeTraps;
+  candidate: Insight;
+}): Promise<Insight> {
+  const prompt = buildCritiquePrompt({
+    term,
+    subDisciplines: traps.subDisciplines,
+    adjacentDisciplines: traps.adjacentDisciplines,
+    candidate,
+  });
+  const r = await fetch('api/insight', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  const body = (await r.json().catch(() => ({}))) as {
+    completion?: string;
+    error?: string;
+  };
+  if (!r.ok || body.error) {
+    // Fall back to generation result on any failure.
+    return candidate;
+  }
+  try {
+    const corrected = parseInsight(body.completion ?? '');
+    // If critique returns malformed/empty moves, fall back to generation.
+    if (corrected.moves.length === 0) return candidate;
+    return corrected;
+  } catch {
+    return candidate;
+  }
 }
 
 async function fetchScopeTraps({ term }: { term: string }): Promise<ScopeTraps> {
