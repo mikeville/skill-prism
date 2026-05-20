@@ -51,10 +51,14 @@ export function Topbar({
 
   return (
     <div
-      className="grid items-center shrink-0 px-4"
+      className="grid items-center shrink-0 px-4 gap-3"
       style={{
         height: 'clamp(48px, 6vmin, 72px)',
-        gridTemplateColumns: '1fr auto 1fr',
+        // `auto minmax(0, 1fr) auto` lets the breadcrumb cell shrink below its
+        // natural size when the brand + icon columns claim their auto width.
+        // `1fr auto 1fr` would size the middle to max-content and let it push
+        // the topbar wider than the viewport on long paths.
+        gridTemplateColumns: 'auto minmax(0, 1fr) auto',
       }}
     >
       {/* Entrance animation lives on this wrapper, not the button. The
@@ -76,10 +80,10 @@ export function Topbar({
           <SkillPrismMark style={{ transform: 'translateY(-1px)' }} />
         </button>
       </span>
-      <div className="justify-self-center min-w-0">
+      <div className="min-w-0 w-full flex justify-center">
         {showCrumbs && <Breadcrumb path={path} onJump={onJump} />}
       </div>
-      <div className="justify-self-end flex items-center gap-3">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={toggle}

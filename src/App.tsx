@@ -82,7 +82,11 @@ const PAGE_CORNER_CLAMP = 'clamp(48px, 6vmin, 72px)';
 const DESKTOP_GRID_ROWS = `${PAGE_CORNER_CLAMP} 1fr ${PAGE_CORNER_CLAMP}`;
 const DESKTOP_CORNER_COL = `calc(${PAGE_CORNER_CLAMP} * var(--inner-aspect, 1))`;
 const MOBILE_GRID_ROWS = 'auto auto auto';
-const MOBILE_GRID_COLS = 'clamp(16px, 3vmin, 24px) 1fr clamp(16px, 3vmin, 24px)';
+// `minmax(0, 1fr)` (not `1fr`) so the center column can shrink below the
+// natural min-content of its children — the breadcrumb is the only realistic
+// offender, but without this any wide row would push the page out and force
+// horizontal scrolling on narrow viewports.
+const MOBILE_GRID_COLS = 'clamp(16px, 3vmin, 24px) minmax(0, 1fr) clamp(16px, 3vmin, 24px)';
 
 const INFO_PANEL_OPEN_PX = 420;
 const PANEL_ANIM_MS = 240;
@@ -275,7 +279,11 @@ function AppInner() {
               constant whether the user is at depth=1 (no crumbs to show)
               or depth>=2. Empty state uses a non-breaking space to reserve
               the line. */}
-          <div className="px-4 pb-2 -mt-1 flex items-center justify-center text-meta font-meta">
+          {/* min-w-0 + overflow-hidden on the centering wrapper keeps long
+              breadcrumbs from pushing the page horizontally on mobile (which
+              would force a horizontal scroll and crop the grid). The Breadcrumb
+              itself ellipsizes per-segment under this constraint. */}
+          <div className="px-4 pb-2 -mt-1 flex items-center justify-center text-meta font-meta min-w-0 overflow-hidden">
             {path.length >= 2 ? (
               <Breadcrumb path={path} onJump={handleJump} allInk />
             ) : (

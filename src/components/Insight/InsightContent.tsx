@@ -135,6 +135,16 @@ const PROSE_STYLE: React.CSSProperties = {
 
 const PROSE_CLASS = 'normal-case text-ink';
 
+// Streaming sometimes lands a partial insight (framing + 1–2 moves) before the
+// final JSON parse fails. When that happens we'd rather show the partial than
+// the bare "COULDN'T LOAD" screen — the partial is usually the *useful* part,
+// and a small inline retry below covers the gap.
+function hasInsightContent(insight: Insight | null): boolean {
+  if (!insight) return false;
+  if (insight.framing && insight.framing.trim().length > 0) return true;
+  return insight.moves.length > 0;
+}
+
 export function InsightContent({
   term,
   insight,
@@ -162,7 +172,7 @@ export function InsightContent({
     <div className={`flex flex-col ${sectionGap} ${pad}`}>
       <div className="flex items-center justify-between gap-3">
         <h2
-          className="text-ink normal-case min-w-0 text-display"
+          className="text-ink normal-case first-letter:uppercase min-w-0 text-display"
           style={{
             fontVariationSettings: '"wght" 600',
           }}
@@ -189,7 +199,10 @@ export function InsightContent({
         </div>
       )}
 
-      {error && !loading && (
+      {/* Full error fallback fires only when we have *no* parseable content.
+          A streamed partial with framing or any move falls through to the
+          render branch below; the retry surfaces as a small WIKI-row sibling. */}
+      {error && !loading && !hasInsightContent(insight) && (
         <div className="flex flex-col gap-2">
           <p className="text-meta font-meta text-ink">COULDN'T LOAD</p>
           {onRetry && (
@@ -204,7 +217,7 @@ export function InsightContent({
         </div>
       )}
 
-      {insight && !loading && !error && (
+      {insight && !loading && (!error || hasInsightContent(insight)) && (
         <>
           {insight.framing && (
             <p
@@ -236,7 +249,7 @@ export function InsightContent({
                       aria-expanded={isExpanded}
                       aria-controls={`move-${i}-action`}
                       className="grid gap-x-1 items-baseline text-left flex-1 hover:opacity-70 transition-opacity duration-hover focus-ring rounded-sm min-w-0"
-                      style={{ gridTemplateColumns: 'auto 3.75rem 1fr' }}
+                      style={{ gridTemplateColumns: 'auto 3rem 1fr' }}
                     >
                       <span
                         className="text-ink-mut shrink-0 inline-flex items-center justify-center"
@@ -286,20 +299,32 @@ export function InsightContent({
             </ol>
           )}
 
-          <a
-            href={wikipediaUrl(term)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring self-start mt-2 inline-flex items-center gap-0"
-          >
-            WIKI
-            <span
-              className="inline-flex"
-              style={{ transform: 'translateY(-1px)' }}
+          <div className="flex items-center gap-4 mt-2">
+            <a
+              href={wikipediaUrl(term)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring self-start inline-flex items-center gap-0"
             >
-              <ExternalLinkIcon />
-            </span>
-          </a>
+              WIKI
+              <span
+                className="inline-flex"
+                style={{ transform: 'translateY(-1px)' }}
+              >
+                <ExternalLinkIcon />
+              </span>
+            </a>
+            {error && onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring self-start"
+                aria-label="Retry insight load"
+              >
+                RETRY
+              </button>
+            )}
+          </div>
         </>
       )}
     </div>

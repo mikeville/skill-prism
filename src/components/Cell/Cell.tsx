@@ -301,9 +301,31 @@ export function Cell({
           }}
           onMouseDown={(e) => e.stopPropagation()}
           aria-label={content ? `Get insight on ${content}` : 'Get insight'}
-          className="flex absolute top-1.5 right-1.5 w-5 h-5 items-center justify-center text-meta font-meta text-ink-mut bg-paper border border-line-meta opacity-0 group-hover:opacity-100 transition-opacity duration-hover hover:text-ink hover:border-ink focus-ring z-10"
+          // Cell-hover affordance: identical SVG to the topbar's sidebar
+          // toggle (same 14×14 viewBox, same strokeWidth, same filled-right
+          // form) so the two read as the same icon family. Reveals on cell
+          // hover only; ink-mut by default, ink on icon-hover so the cell's
+          // group-hover doesn't pre-darken it.
+          className="absolute bottom-0 right-0 inline-flex text-line-meta hover:text-ink opacity-0 group-hover:opacity-100 transition-opacity duration-hover focus-ring leading-none z-10"
         >
-          i
+          {/* The 14×14 viewBox the topbar uses has ~2px of empty space below
+              the rect (rect runs y=2→12). Translating the SVG down by 2px
+              lets the cell's overflow-hidden clip that empty band so the
+              visible rect sits flush with the cell's bottom edge while still
+              matching the topbar icon's exact size and proportions. */}
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.25"
+            aria-hidden
+            className="block translate-y-[2px]"
+          >
+            <rect x="0.5" y="2" width="13" height="10" />
+            <rect x="9" y="2" width="5" height="10" fill="currentColor" stroke="none" />
+          </svg>
         </button>
       )}
       {state === 'loading' ? (

@@ -28,7 +28,7 @@ module.exports = {
       // `meta` = small UI labels (topbar, breadcrumb, kind labels, error
       // states); `body` = insight pane prose, move titles, move actions;
       // `display` = insight term heading + EmptyState input.
-      meta: ['11px', { lineHeight: '1.3' }],
+      meta: ['9px', { lineHeight: '1.3' }],
       body: ['13px', { lineHeight: '1.3', letterSpacing: '-.02rem' }],
       display: ['20px', { lineHeight: '1.2' }],
       // Grid system (Anybody, plain mode) — a separate ladder owned by

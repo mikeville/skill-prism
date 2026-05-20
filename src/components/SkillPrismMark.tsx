@@ -29,6 +29,11 @@ export function SkillPrismMark({ withTagline, className, style, taglineColor = '
     <span
       className={className}
       style={{
+        // inline-block so callers can apply transform/translate via `style` —
+        // CSS transforms are ignored on the default inline-flow span, which
+        // silently swallowed the Topbar's translateY(-1px) optical-centering
+        // nudge after the wordmark was extracted into this component.
+        display: 'inline-block',
         fontFamily: SKILL_PRISM_MARK.family,
         fontSize: SKILL_PRISM_MARK.fontSize,
         fontVariationSettings: SKILL_PRISM_MARK.variationSettings,
