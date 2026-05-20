@@ -43,39 +43,30 @@ export function buildCritiquePrompt({
     )
     .join('\n');
 
-  return `You are an EDITOR auditing a set of 3 recommended resources for someone learning a specific topic. Your only job is to catch and fix ONE failure mode: a recommendation whose primary subject is actually a sub-discipline of the topic, or an adjacent/related field — NOT the topic itself.
+  return `You are an EDITOR auditing 3 recommended resources for someone learning a specific topic. Your only job: catch and fix ONE failure mode — a recommendation whose primary subject is actually a sub-discipline of the topic, or an adjacent/related field, NOT the topic itself.
 
-The author who drafted these recommendations is reflexively reaching for famous canonical resources from the topic's discourse. They may rationalize a wrong-scope pick as "foundational" or "the principles transfer to this topic" or "practitioners of this topic use it." Reject those rationalizations — they are the exact failure mode you exist to catch.
+The author may rationalize a wrong-scope pick as "foundational" or "principles transfer." Reject those rationalizations.
 
-The topic is "${term}".${trapsBlock}
+Topic: "${term}".${trapsBlock}
 
-The author's 3 recommendations:
+Recommendations to audit:
 ${candidateBlock}
 
-Apply this audit to EACH of the 3 recommendations:
+For each recommendation, three quick checks: (a) Would a practitioner of any scope-trap area use this as their primary reference? If yes, FAIL. (b) Does the title contain a trap-area word or near-synonym? If yes, FAIL. (c) Can you name what aspect of THIS topic the resource covers, not a trap area? If not, FAIL.
 
-(a) BIDIRECTIONAL TEST. For each scope-trap area above, ask: "Would a working practitioner of THAT area use this resource as their PRIMARY reference for day-to-day practice in that area?" If yes for any area, the resource is scoped to that area — NOT to the topic. FAIL.
-
-(b) TITLE-SIGNAL TEST. Does the resource's title contain the name of a scope-trap area, or a clear near-synonym (e.g., "type" / "typographic" → typography; "logo" → logo design; "animation" / "animator" → traditional animation)? If yes, FAIL unless you have specific knowledge contradicting the title.
-
-(c) POSITIVE FRAMING TEST. Can you articulate what aspect of THIS topic specifically — not a scope-trap area — the resource covers? If you can only describe it as "covers principles that apply to design generally" or similar, that is rationalization. FAIL.
-
-For each FAIL, replace the recommendation with a real, named resource whose primary subject IS the topic itself. The replacement must:
-- Be a verifiably real resource (book, course, person, or site) — do not invent
-- Be scoped to the topic, not a scope-trap area
-- Match the kind of the original when possible (replace a book with a book, a person with a person), unless no scope-matched candidate of that kind exists — in which case use the strongest scope-matched alternative of any kind
+For each FAIL, replace with a real, named, scope-matched alternative. Match the kind when possible. Do not invent titles.
 
 Respond with ONLY valid JSON, no preamble, no markdown fences:
 {
   "framing": "${candidate.framing.replace(/"/g, '\\"')}",
   "moves": [
-    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "..." },
+    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "ONE TERSE SENTENCE — max 15 words — imperative voice, lowercased." },
     { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "..." },
     { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "..." }
   ]
 }
 
-Keep the framing exactly as given. Keep moves that pass all tests unchanged (same kind, title, and action). Replace moves that fail with corrected ones. The output must have exactly 3 moves.
+Keep framing exactly as given. Keep passing moves unchanged. Replace failures. Exactly 3 moves. Actions: 15 words MAX.
 
 Output JSON only.`;
 }

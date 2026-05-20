@@ -40,15 +40,9 @@ export function buildInsightPrompt({
     : '';
 
   const scopeTrapsBlock = hasTraps
-    ? `\n\nIMPORTANT — SCOPE TRAPS FOR THIS TOPIC:${subDisciplineLine}${adjacentLine}
+    ? `\n\nSCOPE TRAPS for this topic:${subDisciplineLine}${adjacentLine}
 
-Resources whose primary subject is any area listed above are SCOPED WRONG for this topic. Apply this scope-rejection test RIGOROUSLY to every candidate — do not skip these checks because the candidate is famous, well-cited, or feels canonical:
-
-(a) BIDIRECTIONAL TEST. Walk through every scope-trap area listed above. For each one, ask: "Would a working practitioner of THAT area use this resource as a PRIMARY reference for their day-to-day practice?" If the answer is "yes" for any scope-trap area, the resource is scoped there — not to this topic. REJECT it and pick something else. Example reasoning: if "typography" is a scope trap for this topic and a candidate book on type and letterforms would be a primary reference for working typographers, that candidate is scoped to typography. Reject.
-
-(b) TITLE-SIGNAL TEST. Does the resource's title contain the name of any listed scope-trap area, or a clear near-synonym (e.g., "type" / "typographic" → typography; "logo" / "mark" → logo design; "animation" / "animator" → traditional animation)? If yes, that is strong evidence the primary subject is that scope-trap area. REJECT unless you have specific knowledge that the title is misleading.
-
-(c) POSITIVE FRAMING TEST. You may only proceed with a candidate if you can articulate what aspect of THIS topic specifically — not any scope-trap area — the resource covers. If you cannot name what makes the resource about this topic rather than about a listed scope-trap area, it isn't. Pick something else.`
+Reject any candidate whose primary subject is one of the trap areas above. Three quick checks per candidate: (a) Would a practitioner of a trap area use this resource as their primary reference? If yes, REJECT. (b) Does the title contain a trap-area word or near-synonym (e.g., "type" → typography; "animator" → traditional animation)? If yes, REJECT. (c) Can you name what aspect of THIS topic — not a trap area — this resource covers? If not, REJECT.`
     : '';
 
   return `You are helping someone working toward mastery of a specific topic. They're exploring it in a fractal topic-decomposition app and have asked for a concrete path forward. Answer the way a thoughtful practitioner would if a curious smart friend asked them where to start with this topic — not the most-cited resources from a textbook, but the ones the practitioner would genuinely recommend after thinking about it. Respond with ONLY valid JSON, no preamble, no markdown fences.${scopeTrapsBlock}
@@ -60,7 +54,7 @@ Schema:
     {
       "kind": "book" | "course" | "person" | "site",
       "title": "Name of the resource the move pivots around.",
-      "action": "ONE SENTENCE, imperative voice (read / watch / follow / build / join / practice), describing what to do with this resource and the payoff. Plain lowercased prose."
+      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice), describing what to do and the payoff. Plain lowercased prose. Be brief."
     }
   ]
 }
@@ -74,7 +68,7 @@ MOVES:
 
 QUALITY BARS (each move must clear all of these):
 
-1. SCOPE MATCH (apply as an explicit test, not just a guideline). For each candidate resource, ask: "What is this resource's primary subject?" If that primary subject is a NAMED SUB-DISCIPLINE of the topic — not the topic itself — reject the candidate and pick something broader. This is a RECURRING PATTERN across many domains, not a rule keyed on specific terms — the same shape (sub-discipline-resource mistaken for parent-topic-resource) shows up everywhere a broad practice contains narrower named ones. Illustrative pattern instances (these are exemplars of the pattern, not term-specific rules): a typography-scoped resource recommended for a broader graphic-design-style parent; a traditional-animation-scoped resource for a broader motion-design-style parent; a character-design-scoped resource for a broader illustration-style parent; a logo-design-scoped resource for a broader brand-identity-style parent; a React-scoped resource for a broader frontend-engineering-style parent. The pattern is the lesson — apply the test to every candidate, regardless of which topic you're considering. The trap is especially acute when the topic is itself a broad meta-discipline whose discourse overlaps with its named sub-disciplines.
+1. SCOPE MATCH (apply as an explicit test). Ask: "What is this resource's primary subject?" If that primary subject is a NAMED SUB-DISCIPLINE of the topic — not the topic itself — reject and pick something broader. This is a recurring pattern, not a rule for specific terms: e.g., a typography-scoped resource for a broader graphic-design-style parent, or a traditional-animation-scoped resource for a broader motion-design-style parent. The trap is especially acute when the topic itself is a broad meta-discipline whose discourse overlaps with its named sub-disciplines.
 
 2. FIELD PRIMACY, NOT DISCOURSE PRIMACY. The work or person must be primarily of THIS discipline, not adjacent to it. Avoid people who get cited inside this topic's discourse mainly because their adjacent field shares venues with it. Example to avoid: recommending a primarily-type-designer for the topic "graphic design" — type design and graphic design share venues, but the person's primary practice is type, not graphic design. Apply the same test across fields (e.g., do not recommend a primarily-UX-researcher for "product design").
 
@@ -97,6 +91,7 @@ FRAMING:
 
 TONE:
 - Direct and unfussy. No marketing voice. No "leverage", "unlock", "journey", "dive in". No emoji. No URLs anywhere. No publication years.
+- Actions: ~15 words MAX. Brevity wins. Cut clauses that explain the obvious.
 
 BEFORE EMITTING: for each move, silently ask "would a thoughtful practitioner actually hand this to a smart curious friend asking where to start with this topic, or is this the most-cited reflexive answer?" If the latter, replace it.
 ${pathStr}

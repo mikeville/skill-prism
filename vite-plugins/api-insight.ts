@@ -27,7 +27,7 @@ export function apiInsightProxy(): Plugin {
         if (req.method !== 'POST') return jsonResponse(res, 405, { error: 'Method not allowed' });
         if (!apiKey) return jsonResponse(res, 500, { error: 'Missing ANTHROPIC_API_KEY in .env' });
 
-        let body: { prompt?: unknown };
+        let body: { prompt?: unknown; stream?: unknown };
         try {
           body = JSON.parse(await readBody(req)) as typeof body;
         } catch {
@@ -36,6 +36,7 @@ export function apiInsightProxy(): Plugin {
         if (typeof body.prompt !== 'string' || !body.prompt.trim()) {
           return jsonResponse(res, 400, { error: 'Missing prompt' });
         }
+        const wantsStream = body.stream === true;
 
         try {
           const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -49,12 +50,38 @@ export function apiInsightProxy(): Plugin {
               model,
               max_tokens: 1024,
               messages: [{ role: 'user', content: body.prompt }],
+              stream: wantsStream,
             }),
           });
           if (!r.ok) {
             const text = await r.text();
             return jsonResponse(res, r.status, { error: text });
           }
+
+          if (wantsStream) {
+            // Pipe Anthropic's SSE stream straight through to the client.
+            // The browser-side fetchInsight reader parses SSE events directly.
+            res.statusCode = 200;
+            res.setHeader('content-type', 'text/event-stream');
+            res.setHeader('cache-control', 'no-cache');
+            res.setHeader('connection', 'keep-alive');
+            const reader = r.body?.getReader();
+            if (!reader) {
+              res.end();
+              return;
+            }
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                res.write(value);
+              }
+            } finally {
+              res.end();
+            }
+            return;
+          }
+
           const data = (await r.json()) as { content?: Array<{ text?: string }> };
           const completion = data.content?.[0]?.text ?? '';
           return jsonResponse(res, 200, { completion });

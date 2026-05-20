@@ -46,7 +46,19 @@ export function useInsight(
 
     (async () => {
       try {
-        const out = await fetchInsight({ path: path ?? [], term });
+        const out = await fetchInsight({
+          path: path ?? [],
+          term,
+          // Progressive updates: as the generation streams in, render whatever
+          // the parser can extract. Skips when the request is stale.
+          onPartial: (partial) => {
+            if (reqIdRef.current !== reqId) return;
+            // First partial flips `loading` off — we have something visible
+            // even if it's just the framing.
+            setInsight(partial);
+            setLoading(false);
+          },
+        });
         if (reqIdRef.current !== reqId) return;
         insightCacheSet(term, out);
         setInsight(out);

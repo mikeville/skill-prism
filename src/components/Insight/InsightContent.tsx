@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { Insight, ResourceKind } from '../../lib/insightApi';
 
 type Props = {
@@ -43,6 +44,17 @@ export function InsightContent({
 }: Props) {
   const pad = compact ? 'px-4 py-4' : 'px-6 py-6';
   const sectionGap = 'gap-5';
+
+  // Per-move expanded state. Collapsed by default — the panel feels lighter
+  // and "complete" sooner because the eye only has to scan kind + title
+  // initially. Click a row's chevron (or any part of the row) to reveal the
+  // action sentence. State resets whenever the term changes.
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  useEffect(() => {
+    setExpanded({});
+  }, [term]);
+
+  const toggle = (i: number) => setExpanded((prev) => ({ ...prev, [i]: !prev[i] }));
 
   return (
     <div className={`flex flex-col ${sectionGap} ${pad}`}>
@@ -109,39 +121,58 @@ export function InsightContent({
 
           {insight.moves.length > 0 && (
             <ol className="flex flex-col gap-5">
-              {insight.moves.map((m, i) => (
-                <li key={i} className="flex gap-3">
-                  <span
-                    className="text-meta font-meta text-ink-mut shrink-0 pt-0.5"
-                    aria-hidden
-                  >
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-meta font-meta text-ink-mut shrink-0">
-                        {KIND_LABEL[m.kind]}
-                      </span>
-                      <span
-                        className={`${PROSE_CLASS} font-semibold`}
-                        style={{
-                          ...PROSE_STYLE,
-                          fontSize: '15px',
-                          fontVariationSettings: '"wdth" 100, "wght" 600',
-                        }}
-                      >
-                        {m.title}
-                      </span>
-                    </div>
-                    <p
-                      className={PROSE_CLASS}
-                      style={{ ...PROSE_STYLE, fontSize: '14px' }}
+              {insight.moves.map((m, i) => {
+                const isExpanded = !!expanded[i];
+                return (
+                  <li key={i} className="flex gap-3">
+                    <span
+                      className="text-meta font-meta text-ink-mut shrink-0 pt-0.5"
+                      aria-hidden
                     >
-                      {m.action}
-                    </p>
-                  </div>
-                </li>
-              ))}
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => toggle(i)}
+                        aria-expanded={isExpanded}
+                        aria-controls={`move-${i}-action`}
+                        className="flex items-baseline gap-2 flex-wrap text-left w-full hover:opacity-70 transition-opacity duration-hover focus-ring rounded-sm"
+                      >
+                        <span className="text-meta font-meta text-ink-mut shrink-0">
+                          {KIND_LABEL[m.kind]}
+                        </span>
+                        <span
+                          className={`${PROSE_CLASS} font-semibold flex-1`}
+                          style={{
+                            ...PROSE_STYLE,
+                            fontSize: '15px',
+                            fontVariationSettings: '"wdth" 100, "wght" 600',
+                          }}
+                        >
+                          {m.title}
+                        </span>
+                        <span
+                          className="text-meta font-meta text-ink-mut shrink-0 select-none"
+                          aria-hidden
+                          style={{ fontSize: '11px' }}
+                        >
+                          {isExpanded ? '▾' : '▸'}
+                        </span>
+                      </button>
+                      {isExpanded && (
+                        <p
+                          id={`move-${i}-action`}
+                          className={PROSE_CLASS}
+                          style={{ ...PROSE_STYLE, fontSize: '14px' }}
+                        >
+                          {m.action}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </>
