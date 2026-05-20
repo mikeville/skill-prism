@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { EmptyState, type FirstRect } from './components/EmptyState/EmptyState';
+import { ExportPanel } from './components/Export/ExportPanel';
 import { FractalView } from './components/FractalView/FractalView';
 import type { CellClick } from './components/FractalView/Level';
 import type { ZoomIntent } from './components/FractalView/FractalView';
@@ -110,6 +111,17 @@ function AppInner() {
   const [asideOpen, setAsideOpen] = useState<boolean>(true);
   const toggleAside = useCallback(() => setAsideOpen((v) => !v), []);
   const closeAside = useCallback(() => setAsideOpen(false), []);
+
+  // Desktop export-panel state. When true, the info-panel slot renders the
+  // ExportPanel form in place of the InsightPane. Opening export forces the
+  // sidebar open so the controls have room to land; closing returns to the
+  // insight view without changing aside open/closed state.
+  const [exportOpen, setExportOpen] = useState<boolean>(false);
+  const openExport = useCallback(() => {
+    setExportOpen(true);
+    setAsideOpen(true);
+  }, []);
+  const closeExport = useCallback(() => setExportOpen(false), []);
 
   // "Pinned" insight target: clicking the "i" icon on a non-focal cell scopes
   // the desktop sidebar to that cell's term. Cleared on path change so
@@ -348,6 +360,8 @@ function AppInner() {
           hideBreadcrumb={false}
           onToggleAside={toggleAside}
           asideOpen={asideOpen}
+          onOpenExport={openExport}
+          exportOpen={exportOpen}
         />
       </div>
       <div className="bg-paper" />
@@ -376,7 +390,10 @@ function AppInner() {
           cell visually empties — without the fade you'd see the left ~86px
           of panel content peeking out of the collapsed corner column.
           Vertical scroll lives on the inner div so longer payloads remain
-          reachable when the cell is shorter than the content. */}
+          reachable when the cell is shorter than the content. When the export
+          panel is open, ExportPanel replaces InsightPane in this slot so the
+          user can preview the live grid (still visible in the center column)
+          while picking format/size/typography/color. */}
       <div className="bg-paper overflow-hidden">
         <div
           className="h-full overflow-y-auto"
@@ -387,12 +404,22 @@ function AppInner() {
             transition: `opacity ${PANEL_ANIM_MS}ms ${PANEL_ANIM_EASE}`,
           }}
         >
-          {insightTerm && (
-            <InsightPane
-              term={insightTerm}
-              path={insightContextPath}
-              onClose={closeAside}
+          {exportOpen ? (
+            <ExportPanel
+              data={data}
+              topic={focalTerm}
+              onClose={closeExport}
+              withHeader
+              withExtraControls
             />
+          ) : (
+            insightTerm && (
+              <InsightPane
+                term={insightTerm}
+                path={insightContextPath}
+                onClose={closeAside}
+              />
+            )
           )}
         </div>
       </div>

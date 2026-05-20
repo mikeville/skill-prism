@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { selectRandomExamples } from '../../data/examples';
 import { useGridDimensions } from '../../hooks/useGridDimensions';
-import { ANYBODY } from '../../lib/fontConfig';
+import { SkillPrismMark } from '../SkillPrismMark';
 
 export type FirstRect = { top: number; left: number; width: number; height: number };
 
@@ -37,25 +37,14 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
       {/* Brand mark. Vertically centered inside a virtual topbar-height zone so
           it sits at the exact same y-position as the Topbar SKILL PRISM button
           that replaces it after submit. Animates out to the right; the Topbar
-          mark animates in from the left for a jump-cut handoff. */}
+          mark animates in from the left for a jump-cut handoff. The wordmark
+          itself is shared with the Topbar via SkillPrismMark so both states
+          stay visually identical. */}
       <div
-        className={`absolute top-0 left-6 md:left-8 flex items-center text-meta font-meta text-ink transition-[opacity,transform] duration-200 ease-out ${isAnimatingOut ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}
-        style={{
-          height: 'clamp(48px, 6vmin, 72px)',
-          // Tweak the weight here. Anybody axis range: wght 100–900.
-          fontFamily: ANYBODY.family,
-          fontVariationSettings: '"wdth" 100, "wght" 600',
-        }}
+        className={`absolute top-0 left-4 flex items-center text-meta font-meta text-ink transition-[opacity,transform] duration-200 ease-out ${isAnimatingOut ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}
+        style={{ height: 'clamp(48px, 6vmin, 72px)' }}
       >
-        SKILL PRISM
-        <span className="text-line-meta mx-1.5">·</span>
-        <span
-          className="text-ink-mut"
-          // Lighter weight for the tagline so the SKILL PRISM mark stays the focal point.
-          style={{ fontVariationSettings: '"wdth" 100, "wght" 400' }}
-        >
-          FRACTAL TOPIC BROWSER
-        </span>
+        <SkillPrismMark withTagline />
       </div>
       {!isAnimatingOut && (
         <div style={{ width: dims.morphTargetWidth }}>

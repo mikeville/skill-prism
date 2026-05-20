@@ -2,6 +2,7 @@ import { useTypeMode } from '../../contexts/TypeMode';
 import { ANYBODY } from '../../lib/fontConfig';
 import type { DataState } from '../../types';
 import { ExportButton } from '../Export/ExportButton';
+import { SkillPrismMark } from '../SkillPrismMark';
 import { Breadcrumb } from './Breadcrumb';
 import { ColorPicker } from './ColorPicker';
 
@@ -26,6 +27,11 @@ type Props = {
   // `asideOpen` drives the icon's visual state (filled right slot when open).
   onToggleAside?: () => void;
   asideOpen?: boolean;
+  // Desktop only: when provided, the ExportButton delegates open to the parent
+  // (which renders the export controls inline in the info-panel slot rather
+  // than as a modal). `exportOpen` lets the button reflect the active state.
+  onOpenExport?: () => void;
+  exportOpen?: boolean;
 };
 
 export function Topbar({
@@ -36,6 +42,8 @@ export function Topbar({
   hideBreadcrumb,
   onToggleAside,
   asideOpen,
+  onOpenExport,
+  exportOpen,
 }: Props) {
   const { mode, toggle } = useTypeMode();
   const poster = mode === 'poster';
@@ -43,7 +51,7 @@ export function Topbar({
 
   return (
     <div
-      className="grid items-center shrink-0 px-4 md:px-6"
+      className="grid items-center shrink-0 px-4"
       style={{
         height: 'clamp(48px, 6vmin, 72px)',
         gridTemplateColumns: '1fr auto 1fr',
@@ -53,7 +61,9 @@ export function Topbar({
           brand-enter keyframe ends at opacity:1 with animation-fill-mode:both,
           which would otherwise pin the button's opacity and block hover:opacity-60
           from ever applying. Wrapper opacity * button opacity composes, so hover
-          works freely on the inner element. */}
+          works freely on the inner element. The wordmark itself is rendered by
+          SkillPrismMark — shared with the EmptyState mark so the empty→active
+          handoff stays visually consistent. */}
       <span
         className="justify-self-start"
         style={{ animation: 'brand-enter 220ms ease-out both' }}
@@ -62,15 +72,8 @@ export function Topbar({
           type="button"
           onClick={onReset}
           className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring"
-          style={{
-            // Match the EmptyState SKILL PRISM weight so the handoff stays visually consistent.
-            fontFamily: ANYBODY.family,
-            fontSize: '12px',
-            fontVariationSettings: '"wdth" 100, "wght" 800',
-            transform: 'translateY(-1px)'
-          }}
         >
-          SKILL PRISM
+          <SkillPrismMark style={{ transform: 'translateY(-1px)' }} />
         </button>
       </span>
       <div className="justify-self-center min-w-0">
@@ -100,7 +103,12 @@ export function Topbar({
           })}
         </button>
         <ColorPicker />
-        <ExportButton data={data} topic={path[path.length - 1] ?? ''} />
+        <ExportButton
+          data={data}
+          topic={path[path.length - 1] ?? ''}
+          onOpenPanel={onOpenExport}
+          panelOpen={exportOpen}
+        />
         {onToggleAside && (
           <button
             type="button"
@@ -108,7 +116,7 @@ export function Topbar({
             aria-pressed={asideOpen}
             aria-label={asideOpen ? 'HIDE INSIGHT PANEL' : 'SHOW INSIGHT PANEL'}
             title={asideOpen ? 'HIDE INSIGHT PANEL' : 'SHOW INSIGHT PANEL'}
-            className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring leading-none flex items-center justify-center h-6"
+            className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring leading-none flex items-center justify-center h-6 ml-1.5"
           >
             <svg
               width="14"

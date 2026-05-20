@@ -92,6 +92,46 @@ type PanelProps = {
 };
 
 function Panel({ entered, index, swapped, onIndexChange, onSwap }: PanelProps) {
+  return (
+    <div
+      role="dialog"
+      aria-label="Color set picker"
+      aria-hidden={!entered}
+      className="fixed md:absolute z-50 left-4 right-4 md:left-auto md:right-0 md:w-[280px] top-[calc(clamp(48px,6vmin,72px)+6px)] md:top-[calc(100%+6px)]"
+      style={{
+        background: 'var(--c-paper)',
+        border: '1px solid var(--c-line-meta)',
+        opacity: entered ? 1 : 0,
+        transform: entered ? 'translateY(0)' : 'translateY(-4px)',
+        transition: `opacity ${TRANSITION_MS}ms ease-out, transform ${TRANSITION_MS}ms ease-out`,
+        pointerEvents: entered ? 'auto' : 'none',
+      }}
+    >
+      <ColorPickerControls
+        index={index}
+        swapped={swapped}
+        onIndexChange={onIndexChange}
+        onSwap={onSwap}
+      />
+    </div>
+  );
+}
+
+/** Inline (no popover) version of the color picker controls — the same slider
+ *  + swap row used by the Topbar's popover, exported so other surfaces (e.g.
+ *  the desktop export panel) can embed the picker without dealing with
+ *  overflow-clipping issues. */
+export function ColorPickerControls({
+  index,
+  swapped,
+  onIndexChange,
+  onSwap,
+}: {
+  index: number;
+  swapped: boolean;
+  onIndexChange: (i: number) => void;
+  onSwap: () => void;
+}) {
   const max = COLOR_SETS.length - 1;
   const prevIndex = useRef(index);
 
@@ -108,30 +148,33 @@ function Panel({ entered, index, swapped, onIndexChange, onSwap }: PanelProps) {
   }
 
   return (
-    <div
-      role="dialog"
-      aria-label="Color set picker"
-      aria-hidden={!entered}
-      className="fixed md:absolute z-50 left-4 right-4 md:left-auto md:right-0 md:w-[280px] top-[calc(clamp(48px,6vmin,72px)+6px)] md:top-[calc(100%+6px)]"
-      style={{
-        background: 'var(--c-paper)',
-        border: '1px solid var(--c-line-meta)',
-        opacity: entered ? 1 : 0,
-        transform: entered ? 'translateY(0)' : 'translateY(-4px)',
-        transition: `opacity ${TRANSITION_MS}ms ease-out, transform ${TRANSITION_MS}ms ease-out`,
-        pointerEvents: entered ? 'auto' : 'none',
-      }}
-    >
-      <div className="flex items-center gap-3" style={{ padding: '12px 14px' }}>
-        <Slider
-          value={index}
-          max={max}
-          onChange={handleSlide}
-          ariaValueText={`SET ${COLOR_SETS[index].id}`}
-        />
-        <SwapButton swapped={swapped} onSwap={onSwap} />
-      </div>
+    <div className="flex items-center gap-3" style={{ padding: '12px 14px' }}>
+      <Slider
+        value={index}
+        max={max}
+        onChange={handleSlide}
+        ariaValueText={`SET ${COLOR_SETS[index].id}`}
+      />
+      <SwapButton swapped={swapped} onSwap={onSwap} />
     </div>
+  );
+}
+
+/** Inline wrapper that wires ColorPickerControls to ColorTheme context, so
+ *  consumers can drop it in without managing state. */
+export function InlineColorPicker() {
+  const { setId, swapped, setSet, toggleSwap } = useColorTheme();
+  const index = useMemo(
+    () => Math.max(0, COLOR_SETS.findIndex((s) => s.id === setId)),
+    [setId],
+  );
+  return (
+    <ColorPickerControls
+      index={index}
+      swapped={swapped}
+      onIndexChange={(i) => setSet(COLOR_SETS[i].id)}
+      onSwap={toggleSwap}
+    />
   );
 }
 
