@@ -41,7 +41,7 @@ export function SkillSidebar({ markdown, open, onClose }: Props) {
       ].join(' ')}
     >
       <div className="flex items-center px-8 h-[62px] border-b border-line shrink-0">
-        <span className="text-secondary font-secondary">Skill draft</span>
+        <span className="text-body font-secondary">Skill draft</span>
         <button
           type="button"
           onClick={onClose}
@@ -52,7 +52,7 @@ export function SkillSidebar({ markdown, open, onClose }: Props) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-8 font-mono text-tertiary whitespace-pre-wrap">
+      <div className="flex-1 overflow-y-auto p-8 font-mono text-meta whitespace-pre-wrap">
         {markdown}
       </div>
 
@@ -60,7 +60,7 @@ export function SkillSidebar({ markdown, open, onClose }: Props) {
         <button
           type="button"
           onClick={handleCopy}
-          className="text-secondary font-secondary text-ink hover:opacity-60 transition-opacity duration-hover focus-ring"
+          className="text-body font-secondary text-ink hover:opacity-60 transition-opacity duration-hover focus-ring"
         >
           {copied ? 'Copied' : 'Copy SKILL.md'}
         </button>

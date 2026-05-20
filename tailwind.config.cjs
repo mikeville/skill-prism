@@ -24,18 +24,19 @@ module.exports = {
       mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
     },
     fontSize: {
-      meta: ['12px', { lineHeight: '1.4' }],
-      tertiary: ['12px', { lineHeight: '1.25' }],
-      secondary: ['16px', { lineHeight: '1.25' }],
-      primary: ['20px', { lineHeight: '1.2' }],
-      input: ['20px', { lineHeight: '1.2' }],
-      // Plain mode (uppercase, body-copy-like) — only two sizes: the focal
-      // primary cell is larger than every other cell. Sized so common
-      // 9–11 char uppercase words fit at conventional weight/width.
+      // Inter UI/prose ladder — three tokens cover the whole non-grid app.
+      // `meta` = small UI labels (topbar, breadcrumb, kind labels, error
+      // states); `body` = insight pane prose, move titles, move actions;
+      // `display` = insight term heading + EmptyState input.
+      meta: ['11px', { lineHeight: '1.3' }],
+      body: ['13px', { lineHeight: '1.3', letterSpacing: '-.02rem' }],
+      display: ['20px', { lineHeight: '1.2' }],
+      // Grid system (Anybody, plain mode) — a separate ladder owned by
+      // Cell.tsx. Poster-mode grid sizing is owned by the fit hook
+      // (src/lib/fitText.ts SIZE_MAX_BY_TIER), not Tailwind. Do not merge
+      // these with the Inter ladder above.
       'plain-other': ['14px', { lineHeight: '0.9' }],
       'plain-other-md': ['clamp(11px, 1.6vw, 18px)', { lineHeight: '0.9' }],
-      'plain-primary': ['24px', { lineHeight: '0.9' }],
-      'plain-primary-md': ['clamp(22px, 4.4vw, 44px)', { lineHeight: '0.9' }],
     },
     fontWeight: {
       regular: '400',

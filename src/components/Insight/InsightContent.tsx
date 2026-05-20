@@ -124,12 +124,13 @@ function CloseIcon() {
   );
 }
 
-// Body-copy style for prose inside the panel. Conventional readable axes for
-// Anybody Variable: width 100 (normal), weight 400 (regular). Combined with
-// `normal-case` to opt out of the global uppercase rule.
+// Variable-font weight for body prose. Tailwind has no utility for
+// font-variation-settings, so this is the only way to drive Inter's wght
+// axis below the global body default (450). Font SIZE and LINE-HEIGHT are
+// owned by Tailwind's `text-body` token — apply it on the element's
+// className, never set them inline here.
 const PROSE_STYLE: React.CSSProperties = {
-  fontVariationSettings: '"wdth" 100, "wght" 400',
-  lineHeight: 1.5,
+  fontVariationSettings: '"wght" 400',
 };
 
 const PROSE_CLASS = 'normal-case text-ink';
@@ -161,12 +162,9 @@ export function InsightContent({
     <div className={`flex flex-col ${sectionGap} ${pad}`}>
       <div className="flex items-center justify-between gap-3">
         <h2
-          className="text-ink normal-case min-w-0"
+          className="text-ink normal-case min-w-0 text-display"
           style={{
-            ...PROSE_STYLE,
-            fontSize: '20px',
-            lineHeight: 1.2,
-            fontVariationSettings: '"wdth" 100, "wght" 600',
+            fontVariationSettings: '"wght" 600',
           }}
         >
           {term}
@@ -210,8 +208,8 @@ export function InsightContent({
         <>
           {insight.framing && (
             <p
-              className={`${PROSE_CLASS}`}
-              style={{ ...PROSE_STYLE, fontSize: '15px' }}
+              className={`${PROSE_CLASS} text-body`}
+              style={PROSE_STYLE}
             >
               {insight.framing}
             </p>
@@ -223,9 +221,7 @@ export function InsightContent({
                 const isExpanded = !!expanded[i];
                 const url = resolveMoveUrl(m);
                 const titleStyle: React.CSSProperties = {
-                  ...PROSE_STYLE,
-                  fontSize: '15px',
-                  fontVariationSettings: '"wdth" 100, "wght" 600',
+                  fontVariationSettings: '"wght" 600',
                 };
                 return (
                   <li key={i} className="flex items-baseline gap-2">
@@ -256,16 +252,15 @@ export function InsightContent({
                       <span className="text-meta font-meta text-ink-mut shrink-0">
                         {KIND_LABEL[m.kind]}
                       </span>
-                      <span className={`${PROSE_CLASS} font-semibold min-w-0`} style={titleStyle}>
+                      <span className={`${PROSE_CLASS} min-w-0 text-body`} style={titleStyle}>
                         {m.title}
                       </span>
                       {isExpanded && (
                         <p
                           id={`move-${i}-action`}
-                          className={`${PROSE_CLASS} mt-1`}
+                          className={`${PROSE_CLASS} mt-1 text-body`}
                           style={{
                             ...PROSE_STYLE,
-                            fontSize: '14px',
                             gridColumnStart: 3,
                           }}
                         >

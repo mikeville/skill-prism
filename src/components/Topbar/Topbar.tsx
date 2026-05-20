@@ -67,6 +67,7 @@ export function Topbar({
             fontFamily: ANYBODY.family,
             fontSize: '12px',
             fontVariationSettings: '"wdth" 100, "wght" 800',
+            transform: 'translateY(-1px)'
           }}
         >
           SKILL PRISM

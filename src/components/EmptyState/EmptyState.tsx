@@ -71,7 +71,7 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
                 if (e.key === 'Enter') submit();
               }}
               placeholder="WHAT DO YOU WANT TO LEARN?"
-              className="w-full bg-transparent border-0 outline-none text-input text-ink"
+              className="w-full bg-transparent border-0 outline-none text-display text-ink"
             />
           </div>
 
