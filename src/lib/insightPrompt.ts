@@ -54,10 +54,18 @@ Schema:
     {
       "kind": "book" | "course" | "person" | "site",
       "title": "Name of the resource the move pivots around.",
-      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice), describing what to do and the payoff. Plain lowercased prose. Be brief."
+      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice), describing what to do and the payoff. Plain lowercased prose. Be brief.",
+      "url": "Canonical URL — see URL rules below. OMIT this field entirely if you are not confident in the exact URL."
     }
   ]
 }
+
+URL field rules (read carefully — hallucinated URLs are worse than missing URLs):
+- "site": the canonical URL of the site (e.g., "https://www.itsnicethat.com", "https://fontsinuse.com"). Required when you can confidently name it.
+- "person": link to wherever the person is MOST active — their X/Twitter, personal site, Substack, podcast page, studio bio, YouTube channel. Pick ONE single most useful link, not a profile of links.
+- "course": URL of the course's landing page (e.g., on School of Motion, Coursera, YouTube playlist URL, university course page).
+- "book": OMIT the url field entirely. The client constructs a Goodreads search link from the title.
+- ACCURACY OVER COVERAGE: include url ONLY when you are confident the URL is correct. If you're guessing at a URL or can't recall the exact domain/path, OMIT the url field. A missing url is fine; a wrong url is a broken link.
 
 MOVES:
 - EXACTLY 3 items. Each cites one real, named resource. Do not invent titles or misattribute authorship. Do not repeat a resource across moves.

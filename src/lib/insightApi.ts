@@ -8,6 +8,10 @@ export type InsightMove = {
   kind: ResourceKind;
   title: string;
   action: string;
+  // Optional canonical URL. The model populates it for site/person/course
+  // when confident; the UI constructs a Goodreads search link for books.
+  // Missing is fine — UI falls back to plain text.
+  url?: string;
 };
 
 export type Insight = {
@@ -256,18 +260,22 @@ function parsePartialInsight(buffer: string): Insight {
   const movesScope = movesKeyIdx >= 0 ? buffer.slice(movesKeyIdx) : '';
   const moves: InsightMove[] = [];
 
-  // Match complete move objects: { kind, title, action }.
-  const completeRe = /\{\s*"kind"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"action"\s*:\s*"((?:[^"\\]|\\.)*)"\s*\}/g;
+  // Match complete move objects: { kind, title, action, url? }. url is
+  // optional in the schema, so the regex makes the url segment optional.
+  const completeRe = /\{\s*"kind"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"action"\s*:\s*"((?:[^"\\]|\\.)*)"\s*(?:,\s*"url"\s*:\s*"((?:[^"\\]|\\.)*)"\s*)?\}/g;
   let m: RegExpExecArray | null;
   let lastCompleteEnd = 0;
+  const unescape = (s: string) => s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
   while ((m = completeRe.exec(movesScope)) !== null) {
     if (moves.length >= 3) break;
     const kindRaw = m[1].trim().toLowerCase();
     const kind = (VALID_KINDS.has(kindRaw as ResourceKind) ? kindRaw : 'site') as ResourceKind;
+    const url = m[4] ? unescape(m[4]).trim() : undefined;
     moves.push({
       kind,
-      title: m[2].replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
-      action: m[3].replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
+      title: unescape(m[2]),
+      action: unescape(m[3]),
+      ...(url ? { url } : {}),
     });
     lastCompleteEnd = m.index + m[0].length;
   }
@@ -410,13 +418,22 @@ function parseInsight(raw: string): Insight {
     ? (parsed.moves as unknown[])
         .map((m): InsightMove | null => {
           if (!m || typeof m !== 'object') return null;
-          const obj = m as { kind?: unknown; title?: unknown; action?: unknown };
+          const obj = m as {
+            kind?: unknown;
+            title?: unknown;
+            action?: unknown;
+            url?: unknown;
+          };
           const title = typeof obj.title === 'string' ? obj.title.trim() : '';
           const action = typeof obj.action === 'string' ? obj.action.trim() : '';
           const kindRaw = typeof obj.kind === 'string' ? obj.kind.trim().toLowerCase() : '';
           const kind = (VALID_KINDS.has(kindRaw as ResourceKind) ? kindRaw : 'site') as ResourceKind;
+          const urlRaw = typeof obj.url === 'string' ? obj.url.trim() : '';
           if (!title || !action) return null;
-          return { kind, title, action };
+          // Accept http/https only — reject anything that doesn't look like a
+          // real URL to avoid rendering broken links from hallucinated values.
+          const url = /^https?:\/\//i.test(urlRaw) ? urlRaw : undefined;
+          return { kind, title, action, ...(url ? { url } : {}) };
         })
         .filter((m): m is InsightMove => m !== null)
         .slice(0, 3)

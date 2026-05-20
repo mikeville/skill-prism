@@ -7,8 +7,8 @@ type Props = {
   loading: boolean;
   error: string | null;
   onRetry?: () => void;
-  // Desktop only: dismiss handler. Renders a CLOSE button next to TO MASTER
-  // so the user always has a clear way to collapse the panel from inside it.
+  // Desktop only: dismiss handler. Renders an X icon next to the header so
+  // the user always has a clear way to collapse the panel from inside it.
   onClose?: () => void;
   // Compact: smaller padding for tighter contexts (currently unused in the
   // new always-visible layout, but kept for future flexibility).
@@ -22,6 +22,107 @@ const KIND_LABEL: Record<ResourceKind, string> = {
   community: 'COMMUNITY',
   site: 'SITE',
 };
+
+// Resolves the target URL for a move's title link. Books always land on a
+// Goodreads search (no model-supplied URL needed); other kinds use the
+// model's url field when it's a real http(s) URL.
+function resolveMoveUrl(move: {
+  kind: ResourceKind;
+  title: string;
+  url?: string;
+}): string | null {
+  if (move.kind === 'book') {
+    // Strip "by Author Name" suffix to keep the search clean.
+    const cleanTitle = move.title.replace(/\s+by\s+.+$/i, '').trim() || move.title;
+    return `https://www.goodreads.com/search?q=${encodeURIComponent(cleanTitle)}`;
+  }
+  if (move.url && /^https?:\/\//i.test(move.url)) return move.url;
+  return null;
+}
+
+// Wikipedia URL for a term. Wikipedia's convention: capitalized first
+// letter, spaces → underscores, rest URL-encoded. Lowercase still works
+// via redirect, but the canonical URL avoids the round trip. Articles for
+// non-existent terms land on a search/no-article page — accepted as a
+// prototype tradeoff.
+function wikipediaUrl(term: string): string {
+  const trimmed = term.trim();
+  if (!trimmed) return 'https://en.wikipedia.org/';
+  const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  const slug = capitalized.replace(/\s+/g, '_');
+  return `https://en.wikipedia.org/wiki/${encodeURIComponent(slug)}`;
+}
+
+// Icon style guide (matches src/components/Export/ExportButton.tsx):
+// - viewBox 14×14, no fill, stroke="currentColor", strokeWidth 1.2.
+// - All angles 90° or 45° only.
+// - Same visual weight across icons; line endings default (rounded looks
+//   inconsistent at this size).
+
+// One chevron shape (pointing right), rotated 90° clockwise when expanded.
+// Using rotation rather than swapping shapes lets us animate the twirl
+// smoothly via CSS transition.
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      aria-hidden
+      style={{
+        transform: `rotate(${expanded ? 90 : 0}deg)`,
+        transformOrigin: '50% 50%',
+        transition: 'transform 180ms ease-out',
+      }}
+    >
+      {/* Right-pointing carrot, apex at (9.5, 7), legs at 45° from vertical */}
+      <path d="M5.5 3 L9.5 7 L5.5 11" />
+    </svg>
+  );
+}
+
+// Just an arrow pointing up-right — no box. Matches the export icon's
+// stroke width. Right-angle arrowhead (the two head strokes meet at 90°).
+// Shaft and head sized to feel comparable to the chevron/close icons
+// (the previous longer diagonal read as visually larger).
+function ExternalLinkIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      aria-hidden
+    >
+      {/* Diagonal shaft at 45° — shortened from (3,11)→(11,3) */}
+      <path d="M4 10 L10 4" />
+      {/* Arrowhead — perpendicular L at tip (10, 4), 90° corner */}
+      <path d="M5 4 H10 V9" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      aria-hidden
+    >
+      <path d="M3 3 L11 11" />
+      <path d="M11 3 L3 11" />
+    </svg>
+  );
+}
 
 // Body-copy style for prose inside the panel. Conventional readable axes for
 // Anybody Variable: width 100 (normal), weight 400 (regular). Combined with
@@ -47,8 +148,8 @@ export function InsightContent({
 
   // Per-move expanded state. Collapsed by default — the panel feels lighter
   // and "complete" sooner because the eye only has to scan kind + title
-  // initially. Click a row's chevron (or any part of the row) to reveal the
-  // action sentence. State resets whenever the term changes.
+  // initially. Click anywhere on the row (except the external-link icon) to
+  // reveal the action sentence. State resets whenever the term changes.
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   useEffect(() => {
     setExpanded({});
@@ -58,22 +159,9 @@ export function InsightContent({
 
   return (
     <div className={`flex flex-col ${sectionGap} ${pad}`}>
-      <div className="flex flex-col gap-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-meta font-meta text-ink-mut">TO MASTER</span>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring"
-              aria-label="Close insight panel"
-            >
-              CLOSE
-            </button>
-          )}
-        </div>
+      <div className="flex items-center justify-between gap-3">
         <h2
-          className="text-ink normal-case"
+          className="text-ink normal-case min-w-0"
           style={{
             ...PROSE_STYLE,
             fontSize: '20px',
@@ -83,6 +171,16 @@ export function InsightContent({
         >
           {term}
         </h2>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring rounded-sm p-1 -m-1 flex items-center justify-center shrink-0"
+            aria-label="Close insight panel"
+          >
+            <CloseIcon />
+          </button>
+        )}
       </div>
 
       {loading && (
@@ -123,58 +221,90 @@ export function InsightContent({
             <ol className="flex flex-col gap-5">
               {insight.moves.map((m, i) => {
                 const isExpanded = !!expanded[i];
+                const url = resolveMoveUrl(m);
+                const titleStyle: React.CSSProperties = {
+                  ...PROSE_STYLE,
+                  fontSize: '15px',
+                  fontVariationSettings: '"wdth" 100, "wght" 600',
+                };
                 return (
-                  <li key={i} className="flex gap-3">
-                    <span
-                      className="text-meta font-meta text-ink-mut shrink-0 pt-0.5"
-                      aria-hidden
+                  <li key={i} className="flex items-baseline gap-2">
+                    {/* Toggle button uses a 3-column grid: chevron | kind |
+                        title. The expanded action paragraph drops to row 2
+                        col 3 so it aligns under the title (not the chevron).
+                        Kind column has a fixed width so titles line up
+                        vertically across rows regardless of kind length. */}
+                    <button
+                      type="button"
+                      onClick={() => toggle(i)}
+                      aria-expanded={isExpanded}
+                      aria-controls={`move-${i}-action`}
+                      className="grid gap-x-1 items-baseline text-left flex-1 hover:opacity-70 transition-opacity duration-hover focus-ring rounded-sm min-w-0"
+                      style={{ gridTemplateColumns: 'auto 3.75rem 1fr' }}
                     >
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <div className="flex flex-col gap-1 min-w-0 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => toggle(i)}
-                        aria-expanded={isExpanded}
-                        aria-controls={`move-${i}-action`}
-                        className="flex items-baseline gap-2 flex-wrap text-left w-full hover:opacity-70 transition-opacity duration-hover focus-ring rounded-sm"
+                      <span
+                        className="text-ink-mut shrink-0 inline-flex items-center justify-center"
+                        aria-hidden
+                        style={{ transform: 'translateY(3px)' }}
                       >
-                        <span className="text-meta font-meta text-ink-mut shrink-0">
-                          {KIND_LABEL[m.kind]}
-                        </span>
-                        <span
-                          className={`${PROSE_CLASS} font-semibold flex-1`}
-                          style={{
-                            ...PROSE_STYLE,
-                            fontSize: '15px',
-                            fontVariationSettings: '"wdth" 100, "wght" 600',
-                          }}
-                        >
-                          {m.title}
-                        </span>
-                        <span
-                          className="text-meta font-meta text-ink-mut shrink-0 select-none"
-                          aria-hidden
-                          style={{ fontSize: '11px' }}
-                        >
-                          {isExpanded ? '▾' : '▸'}
-                        </span>
-                      </button>
+                        <ChevronIcon expanded={isExpanded} />
+                      </span>
+                      {/* Kind label is right-aligned within its fixed-width
+                          column so the gap between label end and title start
+                          is consistent (~4px) regardless of label length —
+                          BOOK, PERSON, SITE all end at the same x. */}
+                      <span className="text-meta font-meta text-ink-mut shrink-0">
+                        {KIND_LABEL[m.kind]}
+                      </span>
+                      <span className={`${PROSE_CLASS} font-semibold min-w-0`} style={titleStyle}>
+                        {m.title}
+                      </span>
                       {isExpanded && (
                         <p
                           id={`move-${i}-action`}
-                          className={PROSE_CLASS}
-                          style={{ ...PROSE_STYLE, fontSize: '14px' }}
+                          className={`${PROSE_CLASS} mt-1`}
+                          style={{
+                            ...PROSE_STYLE,
+                            fontSize: '14px',
+                            gridColumnStart: 3,
+                          }}
                         >
-                          {m.action}
+                          {m.action || <span className="opacity-50">…</span>}
                         </p>
                       )}
-                    </div>
+                    </button>
+                    {url && (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Open ${m.title} in new tab`}
+                        className="text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring rounded-sm shrink-0 p-1 -m-1 inline-flex items-center justify-center"
+                        style={{ transform: 'translateY(2px)' }}
+                      >
+                        <ExternalLinkIcon />
+                      </a>
+                    )}
                   </li>
                 );
               })}
             </ol>
           )}
+
+          <a
+            href={wikipediaUrl(term)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring self-start mt-2 inline-flex items-center gap-0"
+          >
+            WIKI
+            <span
+              className="inline-flex"
+              style={{ transform: 'translateY(-1px)' }}
+            >
+              <ExternalLinkIcon />
+            </span>
+          </a>
         </>
       )}
     </div>

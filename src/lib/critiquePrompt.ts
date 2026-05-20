@@ -60,13 +60,20 @@ Respond with ONLY valid JSON, no preamble, no markdown fences:
 {
   "framing": "${candidate.framing.replace(/"/g, '\\"')}",
   "moves": [
-    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "ONE TERSE SENTENCE — max 15 words — imperative voice, lowercased." },
-    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "..." },
-    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "..." }
+    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "ONE TERSE SENTENCE — max 15 words — imperative voice, lowercased.", "url": "OPTIONAL — see url rules below" },
+    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "...", "url": "..." },
+    { "kind": "book" | "course" | "person" | "site", "title": "...", "action": "...", "url": "..." }
   ]
 }
 
-Keep framing exactly as given. Keep passing moves unchanged. Replace failures. Exactly 3 moves. Actions: 15 words MAX.
+URL field rules (apply to passing AND replacement moves):
+- "site": canonical URL of the site. Include when confident.
+- "person": link to wherever the person is most active (X, personal site, Substack, podcast, studio bio). Pick ONE.
+- "course": URL of course landing page.
+- "book": OMIT url. Client constructs a Goodreads search link from title.
+- ACCURACY OVER COVERAGE: if you're guessing at a URL, OMIT the field. A missing url is fine; a wrong url is a broken link.
+
+Keep framing exactly as given. Keep passing moves unchanged (preserve their url if present, omit if not). Replace failures with scope-matched alternatives and supply url per the rules above. Exactly 3 moves. Actions: 15 words MAX.
 
 Output JSON only.`;
 }
