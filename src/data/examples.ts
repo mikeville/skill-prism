@@ -1,27 +1,50 @@
 // Curated pool of learning topics: mix of practical, everyday, personal development, and whimsical
 export const EXAMPLE_POOL = [
   // Career / practical upskilling
-  'machine learning',
-  'data analysis',
+  'agentic design',
   'cybersecurity',
-  'project management',
 
   // Everyday / informal learning
-  'cooking',
-  'personal finance',
-  'spanish language',
+  'baking',
+  'make money',
+  'foreign language',
   'guitar',
-  'productivity systems',
+  'minimalism',
+  'self defense',
 
   // Mental health & personal development
-  'anxiety & trauma',
-  'sleep & longevity',
+  'anxiety',
+  'sleep',
   'attachment styles',
+  'procrastination',
+  'stop being an asshole',
+  'stop people pleasing',
 
-  // Whimsical / thought-provoking
-  'how to end a zoom',
+  // Thought-provoking
   'consciousness',
   'time',
+  'love',
+  'animal minds',
+  'memetics',
+
+  // History
+  'ancient mysteries',
+  'Greco-Buddhist kingdoms',
+  'earth before humans',
+  'The Dancing Plague',
+  'The Carrington Event',
+
+  // Funny
+  'high five or fist bump',
+  'escape a volcano',
+  'how to be a human',
+  'how to end a hug',
+  'small talk',
+  'outrun a moose',
+  'spot a serial killer',
+  'eat messy food on a date',
+  'mosh pits',
+  'animal CPR',
 ] as const;
 
 // Helper to randomly select N unique items from the pool

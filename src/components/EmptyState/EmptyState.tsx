@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { selectRandomExamples } from '../../data/examples';
 import { useGridDimensions } from '../../hooks/useGridDimensions';
 import { SkillPrismMark } from '../SkillPrismMark';
@@ -18,7 +18,7 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
   const dims = useGridDimensions();
 
   useEffect(() => {
-    setExamples(selectRandomExamples(3));
+    setExamples(selectRandomExamples(7));
     inputRef.current?.focus();
   }, []);
 
@@ -67,16 +67,18 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
           <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta font-meta">
             <span className="text-ink-mut">TRY:</span>
             {examples.map((ex, i) => (
-              <span key={ex}>
+              <Fragment key={ex}>
                 <button
                   type="button"
                   onClick={() => submit(ex)}
-                  className="underline decoration-ink-mut underline-offset-[3px] text-ink-mut hover:text-ink transition-colors duration-hover focus-ring"
+                  className="underline decoration-ink-mut underline-offset-[3px] text-ink-mut hover:text-ink transition-colors duration-hover focus-ring leading-4"
                 >
                   {ex}
                 </button>
-                {i < examples.length - 1 && <span className="text-ink-mut mx-1">·</span>}
-              </span>
+                {i < examples.length - 1 && (
+                  <span className="text-ink-mut" aria-hidden="true">·</span>
+                )}
+              </Fragment>
             ))}
           </div>
         </div>
