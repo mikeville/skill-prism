@@ -50,7 +50,16 @@ export function useBreakdown(path: string[]): UseBreakdownResult {
 
     (async () => {
       try {
-        const out = await generateBreakdown({ topic, path });
+        const out = await generateBreakdown({
+          topic,
+          path,
+          onPartial: (partial) => {
+            if (reqIdRef.current !== reqId) return; // stale
+            // Keep loading: true so unfilled cells render as skeletons (the
+            // Cell state machine falls through to 'loading' when term==='').
+            setData({ topic, mains: partial.mains, subs: partial.subs, loading: true });
+          },
+        });
         if (reqIdRef.current !== reqId) return; // stale
         cacheSet(path, out);
         setData({ topic, mains: out.mains, subs: out.subs, loading: false });

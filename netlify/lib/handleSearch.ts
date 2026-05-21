@@ -45,7 +45,7 @@ export type SearchOutcome =
   | { status: 200; body: { completion: string; cache_hit: boolean } }
   | { status: number; body: { error: string } };
 
-function parseBreakdown(raw: string): Breakdown | null {
+export function parseBreakdown(raw: string): Breakdown | null {
   let cleaned = raw.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '');
@@ -76,80 +76,106 @@ function parseBreakdown(raw: string): Breakdown | null {
   return { mains, subs };
 }
 
+// Cache-lookup half of the pipeline. Returns a hit envelope (already shaped as
+// SearchOutcome) or { hit: false }. Used by both the non-streaming
+// handleSearch orchestrator and the streaming branches in the proxies —
+// streaming callers short-circuit to the cache-hit JSON envelope rather than
+// streaming, since cache hits are instant anyway.
+export async function lookupCache(
+  req: SearchRequest,
+  model: string,
+): Promise<{ hit: true; outcome: SearchOutcome } | { hit: false }> {
+  if (req.path.length === 0) return { hit: false };
+  const ttlDays = resolveTtlDays();
+  const cached = await getCachedBreakdown(model, req.path, ttlDays);
+  if (!cached) return { hit: false };
+
+  await insertSearch({
+    session_id: req.session_id,
+    path: req.path,
+    breakdown_id: cached.id,
+    cache_hit: true,
+    ip: req.ip,
+    country: req.country,
+    city: req.city,
+    user_agent: req.user_agent,
+    referrer: req.referrer,
+  });
+  console.log(`[cache hit] ${req.path.join(' › ')}`);
+  return {
+    hit: true,
+    outcome: {
+      status: 200,
+      body: {
+        completion: JSON.stringify(cached.result),
+        cache_hit: true,
+      },
+    },
+  };
+}
+
+// Post-Anthropic half of the pipeline: usage log + DB persist. The `usage`
+// argument is shaped like the `usage` field on AnthropicMessage so streaming
+// callers (which assemble it from `message_start`/`message_delta` SSE events)
+// and non-streaming callers can share the same path.
+export async function finalizeBreakdown(
+  req: SearchRequest,
+  completion: string,
+  usage: { input_tokens?: number; output_tokens?: number },
+  model: string,
+): Promise<void> {
+  const fakeData: AnthropicMessage = {
+    content: [{ type: 'text', text: completion }],
+    usage,
+  };
+  const entry = buildUsageEntry(req.prompt, fakeData, model);
+  console.log(formatUsageLine(entry));
+  console.log(JSON.stringify(entry));
+
+  if (!dbEnabled || req.path.length === 0) return;
+  const parsed = parseBreakdown(completion);
+  if (!parsed) {
+    console.warn('[handleSearch] could not parse breakdown for cache; skipping persistence');
+    return;
+  }
+  const id = await insertBreakdown({
+    model,
+    path: req.path,
+    result: parsed,
+    input_tokens: entry.input_tokens,
+    output_tokens: entry.output_tokens,
+    cost_usd: entry.estimated_cost_usd ?? 0,
+  });
+  if (id) {
+    await insertSearch({
+      session_id: req.session_id,
+      path: req.path,
+      breakdown_id: id,
+      cache_hit: false,
+      ip: req.ip,
+      country: req.country,
+      city: req.city,
+      user_agent: req.user_agent,
+      referrer: req.referrer,
+    });
+  }
+}
+
 export async function handleSearch(
   req: SearchRequest,
   callAnthropic: CallAnthropic,
   model: string,
 ): Promise<SearchOutcome> {
-  const ttlDays = resolveTtlDays();
+  const cache = await lookupCache(req, model);
+  if (cache.hit) return cache.outcome;
 
-  // 1. Server-side cache lookup.
-  if (req.path.length > 0) {
-    const cached = await getCachedBreakdown(model, req.path, ttlDays);
-    if (cached) {
-      await insertSearch({
-        session_id: req.session_id,
-        path: req.path,
-        breakdown_id: cached.id,
-        cache_hit: true,
-        ip: req.ip,
-        country: req.country,
-        city: req.city,
-        user_agent: req.user_agent,
-        referrer: req.referrer,
-      });
-      console.log(`[cache hit] ${req.path.join(' › ')}`);
-      return {
-        status: 200,
-        body: {
-          completion: JSON.stringify(cached.result),
-          cache_hit: true,
-        },
-      };
-    }
-  }
-
-  // 2. Cache miss → call Anthropic.
   const r = await callAnthropic(req.prompt);
   if (!r.ok) {
     return { status: r.status, body: { error: r.text } };
   }
   const completion = r.data.content?.[0]?.text ?? '';
 
-  // 3. Existing console-log usage line (kept for Netlify-log redundancy).
-  const entry = buildUsageEntry(req.prompt, r.data, model);
-  console.log(formatUsageLine(entry));
-  console.log(JSON.stringify(entry));
-
-  // 4. Best-effort persistence. DB failures must not break the user.
-  if (dbEnabled && req.path.length > 0) {
-    const parsed = parseBreakdown(completion);
-    if (parsed) {
-      const id = await insertBreakdown({
-        model,
-        path: req.path,
-        result: parsed,
-        input_tokens: entry.input_tokens,
-        output_tokens: entry.output_tokens,
-        cost_usd: entry.estimated_cost_usd ?? 0,
-      });
-      if (id) {
-        await insertSearch({
-          session_id: req.session_id,
-          path: req.path,
-          breakdown_id: id,
-          cache_hit: false,
-          ip: req.ip,
-          country: req.country,
-          city: req.city,
-          user_agent: req.user_agent,
-          referrer: req.referrer,
-        });
-      }
-    } else {
-      console.warn('[handleSearch] could not parse breakdown for cache; skipping persistence');
-    }
-  }
+  await finalizeBreakdown(req, completion, r.data.usage ?? {}, model);
 
   return {
     status: 200,
