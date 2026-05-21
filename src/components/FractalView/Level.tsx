@@ -216,22 +216,14 @@ export function Level({
 
   if (!standalone) return innerGrid;
 
-  // Mobile single-grid (depth=1 standalone). The outer frame around the 3×3
-  // is now provided by the App's macro 3×3 grid (the gap-px + bg-line-meta
-  // parent that surrounds the middle-middle cell), so we no longer need our
-  // own bg-line-meta + p-px wrapper here — keeping it would render a second
-  // 1px frame and produce the "double border" the user called out. The
-  // wrapper still exists for: (a) the FLIP morph target on mobile, (b)
-  // enforcing the 3:4 aspect ratio that makes mobile cells more readable.
+  // Mobile single-grid (depth=1 standalone). The outer dark frame and the
+  // mobile-readable proportions are both owned by App.tsx's middle-row
+  // container (which sets the aspect-ratio and max-height); this wrapper is
+  // just the FLIP morph target — primaryRef captures the same rect as the
+  // surrounding container.
   return (
-    <div className="w-full h-full flex items-center justify-center">
-      <div
-        ref={primaryRef}
-        className="overflow-hidden w-full h-full"
-        style={{ aspectRatio: '3 / 4', maxHeight: '100%' }}
-      >
-        {innerGrid}
-      </div>
+    <div ref={primaryRef} className="overflow-hidden w-full h-full">
+      {innerGrid}
     </div>
   );
 }

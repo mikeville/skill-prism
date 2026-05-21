@@ -251,6 +251,7 @@ function AppInner() {
         style={{
           gridTemplateColumns: MOBILE_GRID_COLS,
           gridTemplateRows: MOBILE_GRID_ROWS,
+          alignContent: 'start',
         }}
       >
         {/* Top row — sticky so the header stays as content scrolls under it.
@@ -302,10 +303,10 @@ function AppInner() {
         <div className="bg-paper" />
         <div className="bg-paper relative">
           <div
-            className="w-full mx-auto"
+            className="w-full"
             style={{
               aspectRatio: '3 / 4',
-              maxWidth: 'min(100%, calc(100vh - 220px) * 3 / 4)',
+              maxHeight: 'calc(100vh - 220px)',
             }}
           >
             <FractalView
