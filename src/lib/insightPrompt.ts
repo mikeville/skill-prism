@@ -73,6 +73,7 @@ MOVES:
 - BIAS toward a mix of kinds when the field offers strong real answers across multiple kinds. A book + course + person is often a strong shape — but only when each is genuinely the right answer here. Do not force a third kind in just to satisfy diversity.
 - Repeating a kind is acceptable when the duplicates are genuinely complementary — e.g. two living practitioners whose work represents different, complementary perspectives on this topic. Avoid duplication that's just two takes on the same lane.
 - Never include a weak resource just to hit 3 moves across 3 different kinds — drop the weak slot for a stronger one of a kind you've already used.
+- NO AUTHOR/PERSON OVERLAP. A "person" move and a "book" move must not point at the same individual. If you're considering both Person X AND a book authored by Person X, pick one: either keep X as the person and choose a book by a different author, or keep the book and choose a different person. Two slots on the same human is duplication, not coverage. Apply the same check to "course" and "site" moves taught/run by a named person — don't echo them as a "person" move too.
 
 QUALITY BARS (each move must clear all of these):
 
@@ -97,11 +98,19 @@ KIND GUIDANCE:
 FRAMING:
 - MAX ~22 words. Plain sentence-case prose. Not a summary of what the term is. Tell the reader what mastery of this topic asks them to see, accept, or hold in tension.
 
-TONE:
-- Direct and unfussy. No marketing voice. No "leverage", "unlock", "journey", "dive in". No emoji. No URLs anywhere. No publication years.
-- Actions: ~15 words MAX. Brevity wins. Cut clauses that explain the obvious.
+TONE — sound like a thoughtful practitioner thinking out loud, not an LLM producing copy:
+- Direct and unfussy. No marketing voice. No emoji. No URLs anywhere. No publication years.
+- Avoid AI-tell words: leverage, unlock, journey, dive in, delve, intricate, tapestry, vital, crucial, pivotal, key (as adjective), testament, underscore, enduring, vibrant, profound, enhance, empower, foster, cultivate, ensure, showcase, robust, seamless, holistic, comprehensive. "Landscape" used as an abstract noun. "Rich" used figuratively.
+- Avoid negative-parallelism framings like "X isn't Y — it's Z" or "It's not just X, it's Y". Just say what it is.
+- Avoid em dashes for dramatic effect. A period or comma usually reads more human.
+- Avoid persuasive-authority hedges: "at its core", "the real question is", "fundamentally", "what really matters", "in essence". Make the point without ceremony.
+- Avoid "-ing" tails that fake depth: "highlighting how…", "revealing the…", "ensuring that…", "reflecting…". Drop them or rewrite as a clause that earns its place.
+- Avoid the rule of three when you're reaching for a third item. Two specifics beat three vague ones.
+- Vary rhythm. A short sentence next to a longer one reads more human than uniform mid-length sentences.
+- Have a point of view. A practitioner says what they actually think, allows tension, and admits when something is contested. Pure neutrality reads as bot.
+- Actions: ~15 words MAX. Imperative voice. Cut "to understand why…" / "to see how…" tails that explain the obvious payoff.
 
-BEFORE EMITTING: for each move, silently ask "would a thoughtful practitioner actually hand this to a smart curious friend asking where to start with this topic, or is this the most-cited reflexive answer?" If the latter, replace it.
+BEFORE EMITTING: for each move, silently ask "would a thoughtful practitioner actually hand this to a smart curious friend asking where to start with this topic, or is this the most-cited reflexive answer?" If the latter, replace it. Then read the framing and actions out loud in your head — if any line sounds like a marketing deck, a Wikipedia lead, or an LLM summary, rewrite it in plainer human words.
 ${pathStr}
 
 Output JSON only.`;
