@@ -300,15 +300,59 @@ function shouldBreak(
   return false;
 }
 
-// Plain-mode axes — must match Cell.tsx's plain-mode font-variation-settings
-// so the width prediction below corresponds to what's actually rendered.
-export const PLAIN_AXES = { wdth: 100, wght: 500 } as const;
+// Plain-mode wght is constant; the wdth axis is responsive (see
+// getPlainTypeSettings below) and is passed in to every width probe so
+// predictions match what's actually rendered.
+export const PLAIN_WGHT = 500;
+
+// Compute uniform plain-mode type settings for a given cell width. All plain
+// cells in the grid share the same width (1fr in a square grid), so every
+// cell calling this with its own cellW produces the same answer — no global
+// context needed to keep cells visually consistent.
+//
+// Both fontSize and wdth scale down on narrower viewports with floors, so
+// type never goes below readable size or skeletal-narrow. wght stays at 500
+// so cells read with consistent visual weight at every viewport.
+//
+// Calibration: at typical desktop cellW (~100px) we want ~13px text with
+// wdth=100; at very narrow cells (~60px) we drop to ~10px and wdth=80 so
+// the longest hyphenated half-word (e.g. WEIGHT-, PROCRAS-) still fits.
+const PLAIN_FS_MIN = 10;
+const PLAIN_FS_MAX = 18;
+const PLAIN_FS_RATIO = 0.16;
+const PLAIN_WDTH_MIN = 80;
+const PLAIN_WDTH_MAX = 100;
+const PLAIN_WDTH_NARROW_CELL = 60;
+const PLAIN_WDTH_RAMP = 0.5;
+
+export type PlainTypeSettings = { fontSize: number; wdth: number; wght: number };
+
+export function getPlainTypeSettings(cellW: number | undefined): PlainTypeSettings {
+  // Fallback when cellW isn't measured yet — pick mid-range values so the
+  // initial paint isn't visibly broken before the ResizeObserver fires.
+  if (!cellW || cellW <= 0) {
+    return { fontSize: 13, wdth: PLAIN_WDTH_MAX, wght: PLAIN_WGHT };
+  }
+  // clamp() signature is (value, lo, hi).
+  const fontSize = clamp(cellW * PLAIN_FS_RATIO, PLAIN_FS_MIN, PLAIN_FS_MAX);
+  const wdth = clamp(
+    PLAIN_WDTH_MIN + (cellW - PLAIN_WDTH_NARROW_CELL) * PLAIN_WDTH_RAMP,
+    PLAIN_WDTH_MIN,
+    PLAIN_WDTH_MAX,
+  );
+  return { fontSize, wdth, wght: PLAIN_WGHT };
+}
 
 // Public helper for callers that need the rendered text width at the actual
 // plain-mode font size (e.g. the primary-cell arrow overlay sizing its
-// exclusion circle to inscribe the text). Linear-scales the 100px probe.
-export function measurePlainTextWidth(text: string, fontSize: number): number {
-  return (probeWidth(text, PLAIN_AXES.wdth, PLAIN_AXES.wght) * fontSize) / PROBE_SIZE;
+// exclusion ellipse to inscribe the text). Linear-scales the 100px probe at
+// the active wdth so the result matches what's rendered.
+export function measurePlainTextWidth(
+  text: string,
+  fontSize: number,
+  wdth: number = PLAIN_WDTH_MAX,
+): number {
+  return (probeWidth(text, wdth, PLAIN_WGHT) * fontSize) / PROBE_SIZE;
 }
 
 // Plain-mode break decision. The poster heuristic compares predicted intact
@@ -316,35 +360,40 @@ export function measurePlainTextWidth(text: string, fontSize: number): number {
 // font is fixed, so the question reduces to: does the intact token actually
 // fit at the rendered font size? If yes, leave it; if no, hyphenate.
 //
-// Threshold is lower than poster's ABSOLUTE_OK_THRESHOLD because plain has
-// no font-shrink fallback — a 7-char word in a cell that fits 6 chars must
-// break or it'll clip. Below 6 chars we leave intact even on overflow: the
-// hyphenation produces uglier results than a small clip at that length.
+// Threshold is low because plain has no font-shrink fallback — a 6-char word
+// in a cell that fits 5 chars must break or it'll clip. Below 5 chars we
+// leave intact even on overflow: the hyphenation produces uglier results
+// than a small clip at that length.
 //
-// The 10% slack stops words that overflow by ~a single character (SCALES
-// in a 44px cell at 12px) from being broken into "SCA-LES" — that 1-2px of
-// edge clipping under overflow:hidden is far less ugly than a 3+3 hyphen.
-const PLAIN_MIN_BREAK_LEN = 6;
-const PLAIN_OVERFLOW_SLACK = 1.1;
+// PLAIN_OVERFLOW_MARGIN is an absolute safety pad to cover the discrepancy
+// between probeWidth (offscreen measurement) and the actual rendered width
+// (subpixel rendering, font hinting). Empirically ~3-10px gap on
+// 11-12 char words at fontSize=18; 6px covers the common case without
+// triggering extra hyphenation on shorter words.
+const PLAIN_MIN_BREAK_LEN = 5;
+const PLAIN_OVERFLOW_MARGIN = 6;
 function shouldBreakPlain(
   token: string,
   cellW: number | undefined,
   plainFontSize: number | undefined,
+  plainWdth: number,
 ): boolean {
   const len = token.length;
   if (len < PLAIN_MIN_BREAK_LEN) return false;
   if (!cellW || !plainFontSize || plainFontSize <= 0) return false;
-  const intactWidth = (probeWidth(token, PLAIN_AXES.wdth, PLAIN_AXES.wght) * plainFontSize) / PROBE_SIZE;
-  return intactWidth > cellW * PLAIN_OVERFLOW_SLACK;
+  const intactWidth = (probeWidth(token, plainWdth, PLAIN_WGHT) * plainFontSize) / PROBE_SIZE;
+  return intactWidth > cellW - PLAIN_OVERFLOW_MARGIN;
 }
 
 export type SplitLinesOpts = {
   // 'plain' uses a fixed-font-size break test; 'poster' (default) uses the
   // fill-comparison heuristic that assumes the renderer can shrink the font.
   mode?: 'plain' | 'poster';
-  // Required when mode === 'plain'. The actual rendered px size on the cell
-  // (read from getComputedStyle so clamp()-based sizes resolve correctly).
+  // Required when mode === 'plain'. The actual rendered px size + wdth on
+  // the cell. wdth must match what gets applied via fontVariationSettings so
+  // the break-decision probe matches what's rendered.
   plainFontSize?: number;
+  plainWdth?: number;
 };
 
 export function splitLines(
@@ -359,9 +408,10 @@ export function splitLines(
   const longTokenCount = tokens.filter((t) => t.length > 2).length;
   const lineCount = Math.max(1, longTokenCount);
 
+  const plainWdth = opts.plainWdth ?? PLAIN_WDTH_MAX;
   const decide =
     opts.mode === 'plain'
-      ? (t: string) => shouldBreakPlain(t, cellW, opts.plainFontSize)
+      ? (t: string) => shouldBreakPlain(t, cellW, opts.plainFontSize, plainWdth)
       : (t: string) => shouldBreak(t, cellW, cellH, lineCount);
 
   const broken = tokens.map((t) => (decide(t) ? breakLongToken(t) : t)).join(' ');
@@ -541,11 +591,12 @@ export function clearFit(container: HTMLElement) {
     (c) => c instanceof HTMLElement,
   ) as HTMLElement[];
   for (const line of lines) {
-    line.style.fontSize = '';
+    // Only clear the imperative-only artifacts of the poster fit pass
+    // (tracking + alignment override). Don't touch fontSize or
+    // fontVariationSettings — both modes now own those via React inline
+    // style, and clobbering them here would erase the value React just set
+    // on a poster→plain toggle.
     line.style.letterSpacing = '';
     line.style.textAlign = '';
-    // Don't clear fontVariationSettings — plain mode owns this property via
-    // its own inline style and React only updates it on the next commit, so
-    // clearing here would erase plain's static axis settings on toggle.
   }
 }

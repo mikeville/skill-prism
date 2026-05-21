@@ -88,6 +88,7 @@ export function Level({
                 tier="primary"
                 state={state}
                 content={term}
+                cellSpan={3}
                 domRef={primaryRef}
                 onInsightClick={
                   term && onInsightClick ? () => onInsightClick(term) : undefined

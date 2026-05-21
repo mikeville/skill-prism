@@ -31,12 +31,10 @@ module.exports = {
       meta: ['9px', { lineHeight: '1.3' }],
       body: ['13px', { lineHeight: '1.3', letterSpacing: '-.02rem' }],
       display: ['20px', { lineHeight: '1.2' }],
-      // Grid system (Anybody, plain mode) — a separate ladder owned by
-      // Cell.tsx. Poster-mode grid sizing is owned by the fit hook
-      // (src/lib/fitText.ts SIZE_MAX_BY_TIER), not Tailwind. Do not merge
-      // these with the Inter ladder above.
-      'plain-other': ['14px', { lineHeight: '0.9' }],
-      'plain-other-md': ['clamp(11px, 1.6vw, 18px)', { lineHeight: '0.9' }],
+      // Grid cell type is owned entirely by Cell.tsx via inline styles —
+      // poster mode sizes per cell via the fit hook (src/lib/fitText.ts
+      // SIZE_MAX_BY_TIER), plain mode sizes uniformly via
+      // getPlainTypeSettings(cellW). No Tailwind tokens for grid type.
     },
     fontWeight: {
       regular: '400',

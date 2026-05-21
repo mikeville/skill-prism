@@ -1,9 +1,15 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CellState, Tier } from '../../types';
 import { Skeleton } from './Skeleton';
 import { useTypeMode } from '../../contexts/TypeMode';
 import { useFitText } from '../../hooks/useFitText';
-import { measurePlainTextWidth, splitLines, type FitTier } from '../../lib/fitText';
+import {
+  getPlainTypeSettings,
+  measurePlainTextWidth,
+  splitLines,
+  type FitTier,
+  type PlainTypeSettings,
+} from '../../lib/fitText';
 import { ANYBODY } from '../../lib/fontConfig';
 
 type CellProps = {
@@ -14,6 +20,13 @@ type CellProps = {
   children?: ReactNode;
   // compact secondaries (the 8 in the center 3x3) keep the dark ink color but borrow tertiary's smaller type size.
   compact?: boolean;
+  // Number of "small-cell tiles" this cell spans across the grid. Defaults
+  // to 1 for the tertiary/secondary cells (one 1fr slot). The depth=2
+  // primary cell occupies the entire center macro-block, which is 3 small
+  // tiles across, so it passes cellSpan=3. Plain-mode type settings divide
+  // cellSize by this so the primary uses the same uniform fontSize/wdth as
+  // every other cell instead of its own oversized self-measurement.
+  cellSpan?: number;
   // Callback ref attached to the cell's outer div. App.tsx uses this to grab
   // the primary cell node for the empty→active morph (FLIP from input rect).
   domRef?: (el: HTMLDivElement | null) => void;
@@ -32,25 +45,23 @@ const tierFill: Record<Tier, string> = {
   tertiary: 'bg-paper',
 };
 
-// Plain-mode primary uses the same type size as every other cell. The focal
-// cell stands out via highlight colour on the surrounding outer block (and
-// breadcrumb context), not via scale — this dodges the long-word overflow
-// that a larger primary size produced at mobile widths.
-const tierTypePlain: Record<Tier, string> = {
-  primary: 'text-plain-other md:text-plain-other-md text-ink',
-  secondary: 'text-plain-other md:text-plain-other-md text-ink',
-  tertiary: 'text-plain-other md:text-plain-other-md text-ink-mut',
-};
-
-const compactSecondaryTypePlain = 'text-plain-other md:text-plain-other-md text-ink-mut';
-
-// Poster-mode color classes only — fontFamily is set inline from the active
-// typeface, and font-size + weight are owned by the fit hook.
-const tierColorPoster: Record<Tier, string> = {
+// Tier color is the only visual hierarchy carried by typography itself —
+// fontSize/wdth/wght are owned by the mode-specific logic (fit hook in
+// poster, getPlainTypeSettings in plain). The same color map serves both
+// modes; size/scale stand-out is provided by the surrounding outer block
+// highlight (and breadcrumb), not by the type.
+const tierColor: Record<Tier, string> = {
   primary: 'text-ink',
   secondary: 'text-ink',
   tertiary: 'text-ink-mut',
 };
+
+// Plain-mode line-height. Poster mode uses the font's tight 0.8 (lines hug
+// each other so multi-line text fills the cell vertically). Plain mode
+// doesn't fill — it has comfy padding around the text — so it can afford
+// more generous leading. Used both in the rendered <span> lineHeight and in
+// the PrimaryArrows textH calculation so the ellipse height matches.
+const PLAIN_LINE_HEIGHT = 1.1;
 
 function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
   // Compact secondaries (center 3x3) use tertiary sizing in plain mode; mirror that here.
@@ -72,7 +83,18 @@ function fitTierFor(tier: Tier, compact: boolean | undefined): FitTier {
 //
 // Pixel-coordinate SVG (not a percentage viewBox) so the arrowheads keep
 // their proportions and angles in any cell aspect.
-function PrimaryArrows({ lines, plainFontSize }: { lines: string[]; plainFontSize: number }) {
+function PrimaryArrows({
+  lines,
+  plainSettings,
+  hasInsightIcon,
+}: {
+  lines: string[];
+  plainSettings: PlainTypeSettings;
+  // When true, the cell renders a 14×14 insight "i" affordance anchored at
+  // bottom-right; arrows inset further from the cell edges to avoid
+  // colliding with it. Mobile passes false (no insight icon there).
+  hasInsightIcon: boolean;
+}) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
 
@@ -87,37 +109,59 @@ function PrimaryArrows({ lines, plainFontSize }: { lines: string[]; plainFontSiz
   }, []);
 
   const { w, h } = size;
+  const { fontSize: plainFontSize, wdth: plainWdth } = plainSettings;
 
   // Text bounding box in cell-px space. Width = widest line; height = lines
-  // stacked at the rendered line-height. measurePlainTextWidth probes the
-  // active font at the plain-mode axes so the result matches what's drawn.
+  // stacked at the rendered line-height (PLAIN_LINE_HEIGHT, not the font's
+  // tight 0.8 — plain mode uses comfy leading). measurePlainTextWidth
+  // probes the font at the active axes so widths match what's drawn.
   let textW = 0;
   let textH = 0;
   if (plainFontSize > 0) {
     for (const line of lines) {
-      const lw = measurePlainTextWidth(line, plainFontSize);
+      const lw = measurePlainTextWidth(line, plainFontSize, plainWdth);
       if (lw > textW) textW = lw;
     }
-    textH = lines.length * plainFontSize * ANYBODY.lineHeight;
+    textH = lines.length * plainFontSize * PLAIN_LINE_HEIGHT;
   }
 
-  // Ellipse semi-axes: half-text-extent + a small breathing pad on each axis.
-  // Same pad horizontally and vertically, so the cardinal cap-to-glyph gap is
-  // identical up/down/left/right. Clamped so the ellipse never grows past the
-  // cell — keeps arrows visible even in tiny cells.
   const cx = w / 2;
   const cy = h / 2;
-  const m = 6; // cell-edge inset for the arrowhead tip
-  const pad = Math.max(6, plainFontSize * 0.6);
-  const maxAx = Math.max(0, w / 2 - m - 8);
-  const maxAy = Math.max(0, h / 2 - m - 8);
-  const ax = Math.min(textW / 2 + pad, maxAx);
-  const ay = Math.min(textH / 2 + pad, maxAy);
+  // Cell-edge inset for the arrowhead tip. When the cell renders the 14×14
+  // insight "i" affordance at bottom-right (desktop), all 8 arrows inset to
+  // 18px so the bottom-right diagonal clears the icon — symmetry across all
+  // arrows is preferable to asymmetric per-corner insets. On mobile no icon
+  // is rendered, so we use the original tight 6px inset for visual reach.
+  const m = hasInsightIcon ? 18 : 6;
+  // Base pad scales with both text size and cell size so the gap stays
+  // visually consistent whether the cell is tiny (sub-200px) or huge (export
+  // render). Used as the unit for the three direction-specific pads below.
+  const pad = Math.max(8, plainFontSize * 0.8, Math.min(w, h) * 0.03);
+
+  // ── Tune arrow-to-text distance, per direction ─────────────────────────
+  // Each pad is an extra gap added to the text's half-extent in that axis.
+  // Larger value → arrow tail further from text (shorter arrow). The three
+  // are independent: editing one doesn't affect the others.
+  const horizontalPad = pad;       // ← controls left/right arrow tail X
+  const verticalPad = pad * 1.2;   // ← controls up/down arrow tail Y
+  const diagonalPad = pad * 0.9;         // ← controls the four corner arrows
+  // ───────────────────────────────────────────────────────────────────────
+
+  const maxRx = Math.max(0, w / 2 - m - 8);
+  const maxRy = Math.max(0, h / 2 - m - 8);
+
+  // Cardinal exit points (where the four straight arrow tails sit).
+  const horizontalExit = Math.min(textW / 2 + horizontalPad, maxRx);
+  const verticalExit = Math.min(textH / 2 + verticalPad, maxRy);
+
+  // Diagonal exclusion rect (parametric ray-vs-edge clip for the four
+  // corner arrows). Sized by diagonalPad on both axes so editing it shifts
+  // all four diagonals together without touching the cardinals.
+  const diagRx = Math.min(textW / 2 + diagonalPad, maxRx);
+  const diagRy = Math.min(textH / 2 + diagonalPad, maxRy);
 
   // Outer endpoints: cardinal arrows hit the mid-edge, diagonals hit the
-  // corner. Each arrow's start is the intersection of the ellipse with the
-  // ray from the cell centre toward its outer endpoint, found via the
-  // standard parametric ellipse-line intersection: t = 1/√((dx/ax)²+(dy/ay)²).
+  // corner.
   const outer: Array<[number, number]> = [
     [cx, m],          // up
     [cx, h - m],      // down
@@ -132,12 +176,24 @@ function PrimaryArrows({ lines, plainFontSize }: { lines: string[]; plainFontSiz
   const arrows = outer.map(([ox, oy]) => {
     const dx = ox - cx;
     const dy = oy - cy;
-    const t = ax > 0 && ay > 0
-      ? 1 / Math.hypot(dx / ax, dy / ay)
-      : 0;
+    if (dx === 0 && dy === 0) return { x1: cx, y1: cy, x2: ox, y2: oy };
+    // Vertical arrow (up/down) — tail sits verticalExit below/above center.
+    if (dx === 0) {
+      return { x1: cx, y1: cy + Math.sign(dy) * verticalExit, x2: ox, y2: oy };
+    }
+    // Horizontal arrow (left/right) — tail sits horizontalExit aside center.
+    if (dy === 0) {
+      return { x1: cx + Math.sign(dx) * horizontalExit, y1: cy, x2: ox, y2: oy };
+    }
+    // Diagonal — exit on the rect bbox edge: the line first hits
+    // |dx|=diagRx OR |dy|=diagRy whichever has the smaller t.
+    const tx = diagRx <= 0 ? Infinity : diagRx / Math.abs(dx);
+    const ty = diagRy <= 0 ? Infinity : diagRy / Math.abs(dy);
+    const t = Math.min(tx, ty);
+    const safeT = Number.isFinite(t) ? t : 0;
     return {
-      x1: cx + dx * t,
-      y1: cy + dy * t,
+      x1: cx + dx * safeT,
+      y1: cy + dy * safeT,
       x2: ox,
       y2: oy,
     };
@@ -145,7 +201,7 @@ function PrimaryArrows({ lines, plainFontSize }: { lines: string[]; plainFontSiz
 
   return (
     <div ref={ref} className="absolute inset-0 pointer-events-none" aria-hidden>
-      {w > 0 && h > 0 && ax > 0 && ay > 0 && (
+      {w > 0 && h > 0 && diagRx > 0 && diagRy > 0 && (
         <svg width={w} height={h} className="block" data-primary-arrows>
           <defs>
             <marker
@@ -187,6 +243,7 @@ export function Cell({
   onClick,
   children,
   compact,
+  cellSpan = 1,
   domRef,
   onInsightClick,
 }: CellProps) {
@@ -196,15 +253,17 @@ export function Cell({
   const clickable = !!onClick && state === 'content';
 
   // Track cell dimensions so splitLines can break long words contextually —
-  // PERIODIZATION stays intact in a wide cell but breaks in a narrow one.
-  // Also track the resolved plain-mode font size: it comes from clamp()-based
-  // Tailwind classes, so we read getComputedStyle to know the actual px value
-  // splitLines should compare token widths against in plain mode. We subtract
-  // padding from the dimensions so cellSize represents the actual text area
-  // (matches fitMultiline's convention for poster-mode width measurement).
+  // PERIODIZATION stays intact in a wide cell but breaks in a narrow one. We
+  // keep both outer (clientWidth) and inner (clientWidth − padding) so plain
+  // settings can normalize the depth=2 primary's wide outer extent down to
+  // an equivalent small-cell inner width.
   const cellRef = useRef<HTMLDivElement | null>(null);
-  const [cellSize, setCellSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
-  const [plainFontSize, setPlainFontSize] = useState<number>(0);
+  const [cellSize, setCellSize] = useState<{
+    outerW: number;
+    innerW: number;
+    innerH: number;
+    padX: number;
+  }>({ outerW: 0, innerW: 0, innerH: 0, padX: 0 });
   useEffect(() => {
     const el = cellRef.current;
     if (!el) return;
@@ -212,9 +271,13 @@ export function Cell({
       const cs = window.getComputedStyle(el);
       const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
       const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-      setCellSize({ w: el.clientWidth - padX, h: el.clientHeight - padY });
-      const fs = parseFloat(cs.fontSize);
-      if (!Number.isNaN(fs)) setPlainFontSize(fs);
+      const outerW = el.clientWidth;
+      setCellSize({
+        outerW,
+        innerW: outerW - padX,
+        innerH: el.clientHeight - padY,
+        padX,
+      });
     };
     update();
     const ro = new ResizeObserver(update);
@@ -222,15 +285,40 @@ export function Cell({
     return () => ro.disconnect();
   }, []);
 
+  // Plain-mode type settings derived from the canonical small-cell inner
+  // width. For tertiary/secondary cells (cellSpan=1) this is just innerW.
+  // For the depth=2 primary (cellSpan=3) we divide outerW by 3 to get the
+  // equivalent small-cell outer width, then subtract the same padding to
+  // get the inner equivalent — keeps every plain cell at the same
+  // fontSize/wdth instead of letting the primary self-measure its 3x extent.
+  const canonicalCellW = useMemo(() => {
+    if (cellSize.outerW <= 0) return 0;
+    if (cellSpan === 1) return cellSize.innerW;
+    return cellSize.outerW / cellSpan - cellSize.padX;
+  }, [cellSize.outerW, cellSize.innerW, cellSize.padX, cellSpan]);
+
+  const plainSettings = useMemo(
+    () => getPlainTypeSettings(canonicalCellW || undefined),
+    [canonicalCellW],
+  );
+
   const lines = useMemo(
     () =>
       content
-        ? splitLines(content, cellSize.w || undefined, cellSize.h || undefined, {
+        ? splitLines(content, cellSize.innerW || undefined, cellSize.innerH || undefined, {
             mode: poster ? 'poster' : 'plain',
-            plainFontSize: plainFontSize || undefined,
+            plainFontSize: plainSettings.fontSize,
+            plainWdth: plainSettings.wdth,
           })
         : [],
-    [content, cellSize.w, cellSize.h, poster, plainFontSize],
+    [
+      content,
+      cellSize.innerW,
+      cellSize.innerH,
+      poster,
+      plainSettings.fontSize,
+      plainSettings.wdth,
+    ],
   );
   const linesKey = lines.join('\n');
 
@@ -264,13 +352,9 @@ export function Cell({
       }
     : undefined;
 
-  const type = poster
-    ? compact && tier === 'secondary'
-      ? 'text-ink-mut'
-      : tierColorPoster[tier]
-    : compact && tier === 'secondary'
-      ? compactSecondaryTypePlain
-      : tierTypePlain[tier];
+  // Compact center-3x3 secondaries borrow tertiary's muted ink color in both
+  // modes; everything else follows the tier's default color.
+  const type = compact && tier === 'secondary' ? 'text-ink-mut' : tierColor[tier];
 
   const setRef = useCallback(
     (el: HTMLDivElement | null) => {
@@ -290,7 +374,11 @@ export function Cell({
       className={`${base} ${fill} ${type} ${hover}`.trim()}
     >
       {!poster && tier === 'primary' && state === 'content' && (
-        <PrimaryArrows lines={lines} plainFontSize={plainFontSize} />
+        <PrimaryArrows
+          lines={lines}
+          plainSettings={plainSettings}
+          hasInsightIcon={!!onInsightClick}
+        />
       )}
       {onInsightClick && state === 'content' && (
         <button
@@ -333,88 +421,60 @@ export function Cell({
       ) : state === 'empty' ? (
         <span className="text-ink-faint">—</span>
       ) : content ? (
-        poster ? (
-          <div
-            ref={fitRef}
-            data-fit-target
-            data-fit-tier={fitTierFor(tier, compact)}
-            className="flex flex-col items-stretch justify-center w-full h-full uppercase"
-            style={{ fontFamily: font.family }}
-          >
-            {lines.map((line, i) => {
-              // Trim the cap/baseline-to-line-box gap on the first and last
-              // visible lines only, so the stack hugs the cell flush at top
-              // and bottom for vertical centering — but inner lines keep their
-              // natural lineHeight 0.8 leading so adjacent lines don't touch.
-              const isFirst = i === 0;
-              const isLast = i === lines.length - 1;
-              const trim =
-                isFirst && isLast
-                  ? 'trim-both'
-                  : isFirst
-                    ? 'trim-start'
-                    : isLast
-                      ? 'trim-end'
-                      : 'none';
-              return (
-                <span
-                  key={i}
-                  className="block w-full whitespace-nowrap text-center"
-                  style={{
-                    lineHeight: font.lineHeight,
-                    fontVariationSettings: `"wdth" ${font.cellStaticDisplay.wdth}, "wght" ${font.cellStaticDisplay.wght}`,
-                    textBoxTrim: trim,
-                    textBoxEdge: 'cap alphabetic',
-                  }}
-                >
-                  {line}
-                </span>
-              );
-            })}
-          </div>
-        ) : (
-          // Plain mode shares splitLines with poster mode so long words get
-          // TeX-syllable-hyphenated rather than character-broken. Each line is
-          // rendered as its own block; hyphens-auto is the CSS fallback when
-          // an individual line still doesn't fit at the static size. fitRef
-          // stays attached on this branch too so useFitText's clearFit fires
-          // reliably on poster→plain toggle.
-          <div
-            ref={fitRef}
-            data-fit-target
-            data-fit-tier={fitTierFor(tier, compact)}
-            data-fit-mode="plain"
-            className="flex flex-col items-stretch justify-center w-full h-full uppercase"
-            style={{ fontFamily: font.family }}
-          >
-            {lines.map((line, i) => {
-              const isFirst = i === 0;
-              const isLast = i === lines.length - 1;
-              const trim =
-                isFirst && isLast
-                  ? 'trim-both'
-                  : isFirst
-                    ? 'trim-start'
-                    : isLast
-                      ? 'trim-end'
-                      : 'none';
-              return (
-                <span
-                  key={i}
-                  lang="en"
-                  className="block w-full text-center hyphens-auto"
-                  style={{
-                    fontVariationSettings: '"wdth" 100, "wght" 500',
-                    textBoxTrim: trim,
-                    textBoxEdge: 'cap alphabetic',
-                  }}
-                >
-                  {line}
-                </span>
-              );
-            })}
-          </div>
-        )
+        // Both modes share the same line-stack structure. Poster mode owns
+        // fontSize + font-variation via the fit hook (controlled per cell).
+        // Plain mode reads uniform settings from getPlainTypeSettings so
+        // every plain cell renders at the same fontSize/wdth/wght. fitRef
+        // is attached in both modes so useFitText's clearFit fires reliably
+        // on plain→poster toggles.
+        <div
+          ref={fitRef}
+          data-fit-target
+          data-fit-tier={fitTierFor(tier, compact)}
+          data-fit-mode={poster ? 'poster' : 'plain'}
+          className="flex flex-col items-stretch justify-center w-full h-full uppercase"
+          style={{ fontFamily: font.family }}
+        >
+          {lines.map((line, i) => {
+            // Trim the cap/baseline-to-line-box gap on the first and last
+            // visible lines only, so the stack hugs the cell flush at top
+            // and bottom for vertical centering — but inner lines keep their
+            // natural lineHeight 0.8 leading so adjacent lines don't touch.
+            const isFirst = i === 0;
+            const isLast = i === lines.length - 1;
+            const trim =
+              isFirst && isLast
+                ? 'trim-both'
+                : isFirst
+                  ? 'trim-start'
+                  : isLast
+                    ? 'trim-end'
+                    : 'none';
+            const lineStyle: CSSProperties = poster
+              ? {
+                  lineHeight: font.lineHeight,
+                  fontVariationSettings: `"wdth" ${font.cellStaticDisplay.wdth}, "wght" ${font.cellStaticDisplay.wght}`,
+                  textBoxTrim: trim,
+                  textBoxEdge: 'cap alphabetic',
+                }
+              : {
+                  fontSize: `${plainSettings.fontSize}px`,
+                  lineHeight: PLAIN_LINE_HEIGHT,
+                  fontVariationSettings: `"wdth" ${plainSettings.wdth}, "wght" ${plainSettings.wght}`,
+                  textBoxTrim: trim,
+                  textBoxEdge: 'cap alphabetic',
+                };
+            return (
+              <span
+                key={i}
+                className="block w-full whitespace-nowrap text-center"
+                style={lineStyle}
+              >
+                {line}
+              </span>
+            );
+          })}
+        </div>
       ) : null}
       {children}
     </div>
