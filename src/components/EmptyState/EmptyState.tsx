@@ -1,7 +1,17 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { selectRandomExamples } from '../../data/examples';
 import { useGridDimensions } from '../../hooks/useGridDimensions';
 import { SkillPrismMark } from '../SkillPrismMark';
+
+// Placeholder length is the binding constraint for the input's font size — at
+// narrow morphTargetWidth values (e.g. left of ~1100px viewport where the
+// desktop cell is one-third of a constrained container), 20px text-display
+// overflows the input. Solve fontSize = usable / (chars × avg-em-per-char) so
+// the placeholder fits, then clamp into a sane range.
+const PLACEHOLDER = 'WHAT DO YOU WANT TO LEARN?';
+const AVG_EM_PER_CHAR = 0.66; // empirical for Inter uppercase including spaces, with safety margin
+const MIN_FONT_PX = 11;
+const MAX_FONT_PX = 20;
 
 export type FirstRect = { top: number; left: number; width: number; height: number };
 
@@ -16,6 +26,16 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const dims = useGridDimensions();
+
+  // Wrapper uses p-4 (16px) at narrow widths, p-6 (24px) at md+ (Tailwind 769).
+  // Estimate usable inner width from morphTargetWidth so the placeholder fits
+  // exactly when fontSize = usable / (chars × AVG_EM_PER_CHAR).
+  const inputFontSize = useMemo(() => {
+    const padX = typeof window !== 'undefined' && window.innerWidth >= 769 ? 24 : 16;
+    const usable = Math.max(0, dims.morphTargetWidth - padX * 2);
+    const fits = usable / (PLACEHOLDER.length * AVG_EM_PER_CHAR);
+    return Math.min(MAX_FONT_PX, Math.max(MIN_FONT_PX, fits));
+  }, [dims.morphTargetWidth]);
 
   useEffect(() => {
     setExamples(selectRandomExamples(7));
@@ -59,8 +79,9 @@ export function EmptyState({ onSubmit, isAnimatingOut = false }: Props) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') submit();
               }}
-              placeholder="WHAT DO YOU WANT TO LEARN?"
-              className="w-full bg-transparent border-0 outline-none text-display text-ink"
+              placeholder={PLACEHOLDER}
+              className="w-full bg-transparent border-0 outline-none text-ink"
+              style={{ fontSize: `${inputFontSize}px`, lineHeight: 1.2 }}
             />
           </div>
 

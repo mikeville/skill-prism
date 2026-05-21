@@ -29,10 +29,12 @@
     --c-line-meta: color-mix(in srgb, var(--c-paper) 50%, var(--c-ink));
     --c-line-cell: color-mix(in srgb, var(--c-ink-mut) 20%, var(--c-paper));
   }
-  /* Mobile: bypass the paper-mix and use ink-mut at full strength so the
-     hairlines read as proper rules rather than near-invisible separators on
-     the smaller, denser layout. Desktop keeps the faint mix. */
-  @media (max-width: 768px) {
+  /* Mobile (3×3) layout: bypass the paper-mix and use ink-mut at full strength
+     so the hairlines read as proper rules rather than near-invisible separators
+     on the smaller, denser layout. Boundary matches WIDE_LAYOUT_PX in App.tsx
+     (1024) so the line color flips at the same point the layout switches from
+     mobile 3×3 to desktop 9×9. */
+  @media (max-width: 1023px) {
     :root {
       --c-line-cell: var(--c-ink-mut);
     }
