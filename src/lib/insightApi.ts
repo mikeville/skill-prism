@@ -18,6 +18,12 @@ export type InsightMove = {
 export type Insight = {
   framing: string;
   moves: InsightMove[];
+  // Exact Wikipedia article title the model believes best matches this term
+  // in context, or null when no real article fits (colloquial phrases,
+  // novel coinages, ambiguous titles with no good disambiguation). When
+  // null the UI suppresses the WIKI chip entirely rather than dumping the
+  // user into a search results page.
+  wikipediaTitle?: string | null;
 };
 
 const VALID_KINDS: ReadonlySet<ResourceKind> = new Set([
@@ -280,7 +286,9 @@ async function fetchCritique({
     const corrected = parseInsight(body.completion ?? '');
     // If critique returns malformed/empty moves, fall back to generation.
     if (corrected.moves.length === 0) return candidate;
-    return corrected;
+    // Critique focuses on move scope; preserve the original wikipedia_title
+    // decision rather than risking the critique pass dropping or changing it.
+    return { ...corrected, wikipediaTitle: candidate.wikipediaTitle ?? null };
   } catch {
     return candidate;
   }
@@ -352,7 +360,7 @@ function parseScopeTraps(raw: string): ScopeTraps {
 
 function parseInsight(raw: string): Insight {
   const cleaned = extractLastJsonObject(raw);
-  let parsed: { framing?: unknown; moves?: unknown };
+  let parsed: { framing?: unknown; moves?: unknown; wikipedia_title?: unknown };
   try {
     parsed = JSON.parse(cleaned);
   } catch {
@@ -386,5 +394,15 @@ function parseInsight(raw: string): Insight {
         .slice(0, 3)
     : [];
 
-  return { framing, moves };
+  // wikipedia_title may arrive as a string, JSON null, or be absent. Treat
+  // empty strings and the literal "null" as null too (defensive against a
+  // model stringifying it).
+  const wikipediaTitleRaw =
+    typeof parsed.wikipedia_title === 'string' ? parsed.wikipedia_title.trim() : '';
+  const wikipediaTitle =
+    wikipediaTitleRaw && wikipediaTitleRaw.toLowerCase() !== 'null'
+      ? wikipediaTitleRaw
+      : null;
+
+  return { framing, moves, wikipediaTitle };
 }

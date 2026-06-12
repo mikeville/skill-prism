@@ -57,8 +57,17 @@ Schema:
       "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice), describing what to do and the payoff. Plain sentence-case prose. Be brief.",
       "url": "Canonical URL — see URL rules below. OMIT this field entirely if you are not confident in the exact URL."
     }
-  ]
+  ],
+  "wikipedia_title": "EXACT title of the single English Wikipedia article a curious learner of THIS term, in THIS context, would most want to land on. Use Wikipedia's canonical capitalization (e.g., \\"Personal finance\\", \\"Gradient descent\\", \\"Cognitive behavioral therapy\\"). See wikipedia_title rules below. Use JSON null when no real article fits."
 }
+
+wikipedia_title rules (read carefully — a wrong link is worse than no link, but a missing link on a real topic is also bad):
+- Pick the article a thoughtful person would actually want for THIS term in THIS context — not the literal string match. For "make money" framed as a problem of value capture / income, that's "Personal finance" or "Income", NOT the Go-go album titled "Make Money".
+- THE FRAMING YOU JUST WROTE IS THE DISAMBIGUATOR. The breadcrumb path (when present) gives external context; the framing gives internal context. Together they determine which interpretation of the term you committed to. Pick the Wikipedia article consistent with that interpretation. Don't return null just because the bare term is ambiguous — your framing already chose a lane.
+- When the term IS a real encyclopedia topic with a clear primary article, use that exact title (e.g., "Gradient descent", "Bauhaus", "Stoicism").
+- When the term is ambiguous as a string but maps to a real concept under your framing, pick the article for that concept (e.g., "make money" → "Income"; "cut" framed as film editing → "Film editing"; "Python" framed as programming → "Python (programming language)").
+- Return JSON null ONLY when the term is a colloquial phrase, a novel coinage, a how-to gesture, an interpersonal micro-skill, or any expression that genuinely doesn't correspond to any encyclopedia article (e.g., "eat messy foods on a date", "high five or fist bump", "how to end a hug", "make small talk with strangers"). A missing chip is the right answer here.
+- Use the article's exact canonical title with Wikipedia's capitalization. No URL, no underscores, no namespace prefix — just the title string.
 
 URL field rules (read carefully — hallucinated URLs are worse than missing URLs):
 - "site": the canonical URL of the site (e.g., "https://www.itsnicethat.com", "https://fontsinuse.com"). Required when you can confidently name it.

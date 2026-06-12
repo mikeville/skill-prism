@@ -40,16 +40,15 @@ function resolveMoveUrl(move: {
   return null;
 }
 
-// Wikipedia URL for a term. Wikipedia's convention: capitalized first
-// letter, spaces → underscores, rest URL-encoded. Lowercase still works
-// via redirect, but the canonical URL avoids the round trip. Articles for
-// non-existent terms land on a search/no-article page — accepted as a
-// prototype tradeoff.
-function wikipediaUrl(term: string): string {
-  const trimmed = term.trim();
+// Direct Wikipedia URL from a model-supplied article title. The model is
+// responsible for deciding the right interpretation in context (e.g.,
+// "Personal finance" instead of the album "Make Money") and for returning
+// null when no article fits (e.g., "eat messy foods on a date"). The UI
+// only builds a URL when title is non-empty.
+function wikipediaUrl(title: string): string {
+  const trimmed = title.trim();
   if (!trimmed) return 'https://en.wikipedia.org/';
-  const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  const slug = capitalized.replace(/\s+/g, '_');
+  const slug = trimmed.replace(/\s+/g, '_');
   return `https://en.wikipedia.org/wiki/${encodeURIComponent(slug)}`;
 }
 
@@ -300,20 +299,22 @@ export function InsightContent({
           )}
 
           <div className="flex items-center gap-4 mt-2">
-            <a
-              href={wikipediaUrl(term)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring self-start inline-flex items-center gap-0"
-            >
-              WIKI
-              <span
-                className="inline-flex"
-                style={{ transform: 'translateY(-1px)' }}
+            {insight?.wikipediaTitle && (
+              <a
+                href={wikipediaUrl(insight.wikipediaTitle)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring self-start inline-flex items-center gap-0"
               >
-                <ExternalLinkIcon />
-              </span>
-            </a>
+                WIKI
+                <span
+                  className="inline-flex"
+                  style={{ transform: 'translateY(-1px)' }}
+                >
+                  <ExternalLinkIcon />
+                </span>
+              </a>
+            )}
             {error && onRetry && (
               <button
                 type="button"
