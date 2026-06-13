@@ -4,6 +4,7 @@ import { apiAdminProxy } from './vite-plugins/api-admin';
 import { apiCompleteProxy } from './vite-plugins/api-complete';
 import { apiInsightProxy } from './vite-plugins/api-insight';
 import { apiLogEventProxy } from './vite-plugins/api-log-event';
+import { apiSkillsRelevantProxy } from './vite-plugins/api-skills-relevant';
 import { tailwindConfigHmr } from './vite-plugins/tailwind-config-hmr';
 
 // Dev: `npm run dev` (just `vite`).
@@ -18,6 +19,7 @@ export default defineConfig({
     react(),
     apiCompleteProxy(),
     apiInsightProxy(),
+    apiSkillsRelevantProxy(),
     apiLogEventProxy(),
     apiAdminProxy(),
     tailwindConfigHmr(),
