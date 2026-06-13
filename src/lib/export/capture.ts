@@ -16,15 +16,17 @@ type CommonOpts = {
   pixelRatio?: number;
 };
 
-const PAGE_BG = '#4F3B1F'; // matches --c-paper at the default theme values
-
 export async function capturePngBlob(node: HTMLElement, opts: CommonOpts): Promise<Blob> {
   const fontEmbedCSS = await getAnybodyFontEmbedCss();
+  // Read the actual rendered paper color off the node so the export matches
+  // the current theme. Hardcoding here meant the canvas clearColor showed
+  // through whenever the active theme wasn't the original default.
+  const pageBg = window.getComputedStyle(node).backgroundColor || '#ffffff';
   const blob = await domToBlob(node, {
     width: opts.width,
     height: opts.height,
     scale: opts.pixelRatio ?? 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: pageBg,
     font: { cssText: fontEmbedCSS },
   });
   if (!blob) throw new Error('PNG capture returned no blob');
