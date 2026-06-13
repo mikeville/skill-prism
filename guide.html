@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How Skill Prism Works — Designer's Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1a1a;
+    --ink-2: #555;
+    --ink-3: #888;
+    --rule: #ddd;
+    --bg: #fafaf8;
+    --accent: #b8860b;
+    --accent-light: #fdf9ec;
+    --green: #2d6a2d;
+    --green-light: #f0f7f0;
+    --blue: #1a4a7a;
+    --blue-light: #f0f4fa;
+    --cell: #f5f4f0;
+    --cell-hover: #ede9dc;
+    --serif: 'Georgia', serif;
+    --sans: system-ui, -apple-system, sans-serif;
+    --mono: 'Courier New', monospace;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 64px 32px 120px;
+  }
+
+  /* ── Header ── */
+  .header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 40px;
+    margin-bottom: 56px;
+  }
+
+  .kicker {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: normal;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+
+  .header-sub {
+    font-size: 17px;
+    color: var(--ink-2);
+    max-width: 520px;
+    line-height: 1.55;
+  }
+
+  /* ── Sections ── */
+  .section {
+    margin-bottom: 64px;
+  }
+
+  h2 {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    font-size: 19px;
+    font-family: var(--serif);
+    font-weight: normal;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  p {
+    font-size: 15px;
+    color: var(--ink-2);
+    line-height: 1.65;
+    margin-bottom: 14px;
+  }
+
+  p:last-child { margin-bottom: 0; }
+
+  /* ── Steps ── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 0 20px;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .step:first-child { border-top: 1px solid var(--rule); }
+
+  .step-num {
+    font-size: 28px;
+    font-family: var(--serif);
+    color: var(--rule);
+    line-height: 1;
+    padding-top: 2px;
+  }
+
+  .step-body h3 {
+    margin-bottom: 6px;
+  }
+
+  /* ── App mockup ── */
+  .mockup {
+    border: 1px solid var(--rule);
+    background: white;
+    margin: 24px 0;
+    overflow: hidden;
+  }
+
+  .mockup-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--bg);
+  }
+
+  /* Start screen mock */
+  .start-mock {
+    padding: 48px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .start-mock .brand {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .start-mock .input-box {
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid var(--rule);
+    padding: 16px 20px;
+    font-size: 15px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .start-mock .suggestions {
+    font-size: 12px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    max-width: 420px;
+  }
+
+  .start-mock .suggestions a {
+    color: var(--ink-3);
+    text-decoration: underline;
+    text-decoration-color: var(--rule);
+  }
+
+  /* Grid mock */
+  .grid-mock {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    padding: 1px;
+  }
+
+  .grid-cell {
+    background: var(--cell);
+    padding: 8px 6px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    min-height: 44px;
+    display: flex;
+    align-items: flex-end;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .grid-cell.main {
+    background: var(--ink);
+    color: white;
+    font-size: 10px;
+    align-items: flex-start;
+    padding-top: 8px;
+  }
+
+  .grid-cell.highlight {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    position: relative;
+  }
+
+  .grid-cell.highlight::after {
+    content: '← click';
+    font-size: 8px;
+    color: var(--accent);
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Anatomy diagram */
+  .anatomy {
+    border: 1px solid var(--rule);
+    background: white;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 0;
+    margin: 24px 0;
+  }
+
+  .anatomy-grid {
+    border-right: 1px solid var(--rule);
+    padding: 20px;
+  }
+
+  .anatomy-panel {
+    padding: 20px;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .anatomy-panel .panel-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+  }
+
+  .anatomy-panel .framing {
+    font-style: italic;
+    color: var(--ink-2);
+    font-size: 13px;
+    line-height: 1.5;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 12px;
+  }
+
+  .move {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 12px;
+  }
+
+  .move-kind {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    border: 1px solid var(--rule);
+    padding: 2px 5px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  .move-text { color: var(--ink-2); line-height: 1.45; }
+  .move-title { font-weight: 600; color: var(--ink); }
+
+  /* Callout boxes */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-light);
+    padding: 14px 18px;
+    margin: 20px 0;
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+
+  .callout strong { color: var(--ink); }
+
+  .callout.info {
+    border-left-color: var(--blue);
+    background: var(--blue-light);
+  }
+
+  .callout.success {
+    border-left-color: var(--green);
+    background: var(--green-light);
+  }
+
+  /* Glossary */
+  .glossary {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--rule);
+  }
+
+  .glossary-item {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .glossary-item:last-child { border-bottom: none; }
+
+  .glossary-term {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    font-weight: 600;
+    padding: 14px 16px;
+    border-right: 1px solid var(--rule);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+  }
+
+  .glossary-def {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.55;
+    background: white;
+  }
+
+  /* Path/breadcrumb illustration */
+  .path-demo {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 16px 0;
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 10px 16px;
+  }
+
+  .path-crumb {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    padding: 2px 4px;
+  }
+
+  .path-crumb.active {
+    color: var(--ink);
+    font-weight: 600;
+    background: var(--accent-light);
+    padding: 2px 6px;
+  }
+
+  .path-sep {
+    font-size: 12px;
+    color: var(--rule);
+    margin: 0 2px;
+  }
+
+  /* Export mock */
+  .export-mock {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 24px 0;
+  }
+
+  .export-preview {
+    background: white;
+    padding: 20px;
+  }
+
+  .export-controls {
+    background: var(--bg);
+    padding: 16px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .export-control-row { display: flex; flex-direction: column; gap: 3px; }
+  .export-control-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+  }
+
+  .export-select {
+    border: 1px solid var(--rule);
+    background: white;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--ink-2);
+    width: 100%;
+  }
+
+  .export-btn {
+    margin-top: auto;
+    background: var(--ink);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  /* URL bar */
+  .url-bar {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 8px 14px;
+    color: var(--ink-2);
+    margin: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .url-bar .url-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-family: var(--sans);
+    flex-shrink: 0;
+  }
+
+  /* Small grid for mini example */
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    margin: 16px 0;
+  }
+
+  .mini-cell {
+    background: var(--cell);
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    padding: 0 3px;
+    text-align: center;
+  }
+
+  .mini-cell.main { background: var(--ink); color: white; }
+  .mini-cell.active { background: var(--accent); color: white; }
+  .mini-cell.sub { background: white; }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 56px 0;
+  }
+
+  @media (max-width: 600px) {
+    .page { padding: 40px 20px 80px; }
+    .anatomy { grid-template-columns: 1fr; }
+    .anatomy-grid { border-right: none; border-bottom: 1px solid var(--rule); }
+    .glossary-item { grid-template-columns: 1fr; }
+    .glossary-term { border-right: none; border-bottom: 1px solid var(--rule); padding: 10px 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header class="header">
+    <p class="kicker">Designer's Reference Guide</p>
+    <h1>How Skill Prism Works</h1>
+    <p class="header-sub">A plain-language guide to what the app does, how to use it, and what's happening under the hood — no code knowledge required.</p>
+  </header>
+
+
+  <!-- What is it -->
+  <section class="section">
+    <h2>The Big Idea</h2>
+    <h3>A fractal topic browser powered by AI</h3>
+    <p>You type in anything you want to learn — a skill, a subject, a weird question — and the app breaks it into <strong>8 sub-topics</strong>. Click any of those, and it breaks <em>that</em> into 8 more. Keep drilling and you build a layered map of the territory.</p>
+    <p>The word "fractal" in the name means the same pattern repeats at every level: big topic → 8 parts → click one → 8 smaller parts → click one → 8 even-smaller parts. You can go as deep as you want.</p>
+
+    <div class="callout">
+      <strong>The AI part:</strong> Every breakdown is generated live by Claude (Anthropic's AI). Nothing is pre-written. Ask about topology, ask about sourdough — the app handles it.
+    </div>
+  </section>
+
+
+  <!-- Step by step -->
+  <section class="section">
+    <h2>Using the App — Step by Step</h2>
+
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Type anything in the box</h3>
+          <p>The start screen has a single text box. Type a topic and press <strong>Enter</strong>, or click one of the example links below the box.</p>
+
+          <div class="mockup">
+            <div class="mockup-label">Start screen</div>
+            <div class="start-mock">
+              <div class="brand">Skill Prism · Fractal Topic Browser</div>
+              <div class="input-box">What do you want to learn?</div>
+              <div class="suggestions">
+                <span style="color:#aaa">Try:</span>
+                <a href="#">Cybersecurity</a> ·
+                <a href="#">Consciousness</a> ·
+                <a href="#">Anxiety</a> ·
+                <a href="#">Stop People Pleasing</a>
+              </div>
+            </div>
+          </div>
+
+          <p>The examples are randomized — they change each time you load the page. They're meant to show you the range of things that work: serious academic subjects, practical skills, abstract concepts, silly questions. Anything goes.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Wait a moment while the AI generates the breakdown</h3>
+          <p>The grid appears progressively — cells fill in from left to right as Claude streams the response. You'll see the rows arrive one by one. This takes a few seconds.</p>
+          <div class="callout info">
+            <strong>Why is it streaming in?</strong> The app is receiving the AI's response in real-time, word by word, and painting cells as data arrives. This is faster than waiting for everything to finish before showing anything.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Read the grid</h3>
+          <p>The main view is an 8×8 grid. The <strong>top row</strong> (dark cells) are the 8 main sub-topics. The columns below each one show 8 concrete components of that sub-topic.</p>
+
+          <div class="mockup">
+            <div class="mockup-label">Grid view — topic: Typography</div>
+            <div class="grid-mock">
+              <div class="grid-cell main">Letterforms</div>
+              <div class="grid-cell main">Spacing</div>
+              <div class="grid-cell main">Type Systems</div>
+              <div class="grid-cell main">Readability</div>
+              <div class="grid-cell main">Type History</div>
+              <div class="grid-cell main">Display Type</div>
+              <div class="grid-cell main">Web Type</div>
+              <div class="grid-cell main">Type Tools</div>
+
+              <div class="grid-cell">Stroke</div>
+              <div class="grid-cell">Tracking</div>
+              <div class="grid-cell">Scale</div>
+              <div class="grid-cell">Line Length</div>
+              <div class="grid-cell">Gutenberg</div>
+              <div class="grid-cell">Posters</div>
+              <div class="grid-cell">Variable</div>
+              <div class="grid-cell">Fontlab</div>
+
+              <div class="grid-cell">Terminal</div>
+              <div class="grid-cell">Kerning</div>
+              <div class="grid-cell">Hierarchy</div>
+              <div class="grid-cell">Line Height</div>
+              <div class="grid-cell">Old Style</div>
+              <div class="grid-cell">Headlines</div>
+              <div class="grid-cell">WOFF2</div>
+              <div class="grid-cell">Glyphs App</div>
+
+              <div class="grid-cell">Counter</div>
+              <div class="grid-cell">Leading</div>
+              <div class="grid-cell">Contrast</div>
+              <div class="grid-cell">Column Width</div>
+              <div class="grid-cell">Modernism</div>
+              <div class="grid-cell">Logotypes</div>
+              <div class="grid-cell">Font Loading</div>
+              <div class="grid-cell">Fontforge</div>
+            </div>
+          </div>
+
+          <p>The labels are intentionally short — 1 or 2 words each. They're designed to be dense, scannable, and lightly suggestive rather than fully explanatory. Click to explore.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Click a cell to drill deeper</h3>
+          <p>Clicking any cell generates a new breakdown for that specific topic, interpreted in the context of where you started. The drill-in is context-aware: "Kerning" under Typography will be different from a hypothetical "Kerning" reached through a different path.</p>
+
+          <div class="path-demo">
+            <span class="path-crumb">Typography</span>
+            <span class="path-sep">›</span>
+            <span class="path-crumb">Spacing</span>
+            <span class="path-sep">›</span>
+            <span class="path-crumb active">Kerning</span>
+          </div>
+
+          <p>The trail you've followed appears at the top as a breadcrumb. Click any stop in the breadcrumb to jump back to that level. Click the logo (top left) to start over completely.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>Read the Insight panel (desktop only)</h3>
+          <p>On desktop, there's a panel on the right side. It shows two things for whatever topic is currently in focus:</p>
+
+          <div class="anatomy">
+            <div class="anatomy-grid">
+              <div class="mini-grid" style="margin:0;">
+                <div class="mini-cell main" style="grid-column:1/9; height:auto; padding:6px 4px; font-size:8px;">Typography → Spacing → Kerning</div>
+                <div class="mini-cell active">Optical</div><div class="mini-cell">Metric</div><div class="mini-cell">Sidebearing</div><div class="mini-cell">Pair Tables</div><div class="mini-cell">Class Kern</div><div class="mini-cell">Exceptions</div><div class="mini-cell">Visual Test</div><div class="mini-cell">OpenType</div>
+                <div class="mini-cell sub">Whitespace</div><div class="mini-cell sub">Negative</div><div class="mini-cell sub">Caps Pairs</div><div class="mini-cell sub">Rhythm</div><div class="mini-cell sub">Scripts</div><div class="mini-cell sub">Body Text</div><div class="mini-cell sub">Proof</div><div class="mini-cell sub">UFO</div>
+                <div class="mini-cell sub"></div><div class="mini-cell sub"></div><div class="mini-cell sub"></div><div class="mini-cell sub"></div><div class="mini-cell sub"></div><div class="mini-cell sub"></div><div class="mini-cell sub"></div><div class="mini-cell sub"></div>
+              </div>
+            </div>
+            <div class="anatomy-panel">
+              <div>
+                <div class="panel-label">Framing</div>
+                <div class="framing">Kerning is a judgment call that no algorithm gets right — it requires training your eye to see negative space as a shape.</div>
+              </div>
+              <div class="move">
+                <div class="move-kind">Book</div>
+                <div class="move-text">
+                  <div class="move-title">Stop Stealing Sheep</div>
+                  Read it to build a vocabulary for what you're actually adjusting.
+                </div>
+              </div>
+              <div class="move">
+                <div class="move-kind">Site</div>
+                <div class="move-text">
+                  <div class="move-title">kern.type</div>
+                  Practice the interactive kerning game until the patterns become instinct.
+                </div>
+              </div>
+              <div class="move">
+                <div class="move-kind">Person</div>
+                <div class="move-text">
+                  <div class="move-title">Tobias Frere-Jones</div>
+                  Follow his writing on optical spacing decisions.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p>The <strong>framing</strong> (italic text) is a one-sentence take on what this topic really asks of you — not a definition, but a practitioner's perspective.</p>
+          <p>The <strong>first moves</strong> are 3 specific, real resources: books, courses, people to follow, or sites to bookmark. Clicking a book title opens a Goodreads search. Clicking a site or person opens their page.</p>
+
+          <div class="callout success">
+            <strong>Clicking the "i" icon</strong> on any cell in the grid loads that cell's insight in the right panel, without drilling into it. Useful for previewing what a sub-topic contains before committing to a drill.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h3>Export as an image</h3>
+          <p>The export button (top right on desktop) opens a panel where you can download the current grid as an image file. Three options:</p>
+
+          <div class="export-mock">
+            <div class="export-preview">
+              <div class="mini-grid" style="margin:0; opacity:0.6;">
+                <div class="mini-cell main"></div><div class="mini-cell main"></div><div class="mini-cell main"></div><div class="mini-cell main"></div><div class="mini-cell main"></div><div class="mini-cell main"></div><div class="mini-cell main"></div><div class="mini-cell main"></div>
+                <div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div>
+                <div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div><div class="mini-cell"></div>
+              </div>
+            </div>
+            <div class="export-controls">
+              <div class="export-control-row">
+                <div class="export-control-label">Format</div>
+                <select class="export-select"><option>PNG</option><option>SVG</option><option>PDF</option></select>
+              </div>
+              <div class="export-control-row">
+                <div class="export-control-label">Size</div>
+                <select class="export-select"><option>Square</option><option>Landscape</option><option>Portrait</option></select>
+              </div>
+              <div class="export-control-row">
+                <div class="export-control-label">Typography</div>
+                <select class="export-select"><option>Serif</option><option>Sans</option></select>
+              </div>
+              <button class="export-btn">Download</button>
+            </div>
+          </div>
+
+          <p><strong>PNG</strong> — a flat image, best for sharing or embedding anywhere.<br>
+          <strong>SVG</strong> — a vector file, scales to any size without blur, good for print or design tools.<br>
+          <strong>PDF</strong> — a print-ready document.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- URL behavior -->
+  <section class="section">
+    <h2>The URL — Your Position is Shareable</h2>
+    <h3>The URL updates as you drill</h3>
+    <p>Every time you drill into a topic, the browser's address bar updates. That URL captures exactly where you are — you can copy and share it, and anyone who opens it will land at the same spot in the same breakdown.</p>
+
+    <div class="url-bar">
+      <span class="url-label">URL</span>
+      localhost:5179/#Typography/Spacing/Kerning
+    </div>
+
+    <div class="callout info">
+      <strong>Refresh-safe:</strong> Reloading the page won't lose your place. The path is in the URL, and the app will regenerate the breakdown automatically. It may take a moment because it's asking the AI again.
+    </div>
+  </section>
+
+
+  <!-- Glossary -->
+  <section class="section">
+    <h2>Glossary of Terms Used in the UI</h2>
+    <div class="glossary">
+      <div class="glossary-item">
+        <div class="glossary-term">Breakdown</div>
+        <div class="glossary-def">The AI-generated set of 8 main topics + 8 sub-topics each for any given focus. One breakdown = one screen's worth of grid.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Fractal View</div>
+        <div class="glossary-def">The main 8×8 grid you interact with. Called "fractal" because the same pattern repeats at every drill level.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Path</div>
+        <div class="glossary-def">The chain of topics you've drilled through. Shown as a breadcrumb trail. Example: Typography → Spacing → Kerning.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Insight Pane</div>
+        <div class="glossary-def">The right-side panel on desktop that shows a framing statement and 3 learning resources for the current focus topic.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Framing</div>
+        <div class="glossary-def">A one-sentence practitioner's take on what the topic requires you to understand. It's AI-written, styled like advice from someone who's deep in the field.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">First Moves</div>
+        <div class="glossary-def">The 3 specific resources (books, courses, people, or sites) shown in the Insight panel. Each one is a concrete starting point.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Depth</div>
+        <div class="glossary-def">How many levels deep you've drilled. Depth 1 = just the topic you typed. Depth 3 = you've drilled twice from that starting point.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Pinned Term</div>
+        <div class="glossary-def">When you click the "i" icon on a cell, that cell's insight is "pinned" in the right panel — it shows that cell's resources instead of the current focus.</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- What the AI is doing -->
+  <section class="section">
+    <h2>What the AI is Actually Doing</h2>
+    <h3>Two separate AI calls happen</h3>
+    <p>The app makes two kinds of AI requests, and they're independent:</p>
+
+    <div class="callout">
+      <strong>1 — Grid generation:</strong> When you type a topic and hit Enter, the app asks Claude to decompose it into 8 mains and 8 subs each. The AI acts as a "curriculum designer" and is told to keep labels short (1–2 words), specific, and ordered from foundational to advanced.
+    </div>
+
+    <div class="callout info">
+      <strong>2 — Insight generation:</strong> When the right panel loads for a term, a second AI call generates the framing sentence and 3 resources. This one asks Claude to think like a "thoughtful practitioner" recommending resources to a curious friend — not the most-famous textbook answers, but what someone deep in the field would actually suggest.
+    </div>
+
+    <p>Both calls are cached within a session — if you drill back to a topic you've already visited, the existing result loads instantly without hitting the AI again.</p>
+  </section>
+
+
+  <!-- Anatomy summary -->
+  <section class="section">
+    <h2>App Layout at a Glance</h2>
+
+    <div class="glossary" style="margin-top:0;">
+      <div class="glossary-item">
+        <div class="glossary-term">Top bar</div>
+        <div class="glossary-def">The header row. On the left: the Skill Prism logo (click to reset). In the middle: breadcrumb trail of your current path. On the right: export button, panel toggle.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Main grid</div>
+        <div class="glossary-def">Center of the screen. The 8×8 breakdown. Dark top row = main categories. Lighter cells below = specific components. Click any cell to drill in.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Right panel</div>
+        <div class="glossary-def">Desktop only. Insight pane for the current focus, or Export panel when you've clicked the export button. The panel can be hidden with the toggle in the top bar.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Corner cells</div>
+        <div class="glossary-def">The empty cells in the four corners of the screen grid. They're part of the layout's 3×3 outer frame — purely structural, not interactive.</div>
+      </div>
+    </div>
+  </section>
+
+
+  <hr />
+
+  <section class="section" style="margin-bottom:0;">
+    <h2>Quick Reference</h2>
+    <div class="glossary">
+      <div class="glossary-item">
+        <div class="glossary-term">Start over</div>
+        <div class="glossary-def">Click the "Skill Prism" logo, top left.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Go back one level</div>
+        <div class="glossary-def">Click any earlier stop in the breadcrumb trail at the top.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">See resources for a cell</div>
+        <div class="glossary-def">Click the "i" icon on any cell to load its insight without drilling in.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Drill into a cell</div>
+        <div class="glossary-def">Click the cell itself (not the "i" icon).</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Hide the right panel</div>
+        <div class="glossary-def">Click the panel toggle icon in the top-right area of the header.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Export the current grid</div>
+        <div class="glossary-def">Click the export icon in the top bar → choose format → Download.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Share a specific breakdown</div>
+        <div class="glossary-def">Copy the URL from your browser's address bar. It encodes your full path.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
