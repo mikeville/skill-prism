@@ -9,7 +9,7 @@
 //     — this happens for legacy localStorage entries created before the DB
 //     existed, or for paths cached under an older model identifier.
 
-import { dbEnabled, findBreakdown, insertSearch } from './db';
+import { isDbEnabled, findBreakdown, insertSearch } from './db';
 
 export type LogEventRequest = {
   session_id: string;
@@ -29,7 +29,7 @@ export async function handleLogEvent(
   req: LogEventRequest,
   model: string,
 ): Promise<LogEventOutcome> {
-  if (!dbEnabled) return { status: 200, body: { logged: false } };
+  if (!isDbEnabled()) return { status: 200, body: { logged: false } };
   if (!req.session_id) return { status: 400, body: { error: 'Missing session_id' } };
   if (req.path.length === 0) return { status: 400, body: { error: 'Missing path' } };
 

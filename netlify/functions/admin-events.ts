@@ -1,12 +1,13 @@
 // GET /api/admin-events?limit=N&offset=N — paginated search log with joined breakdown info.
 import type { Handler } from '@netlify/functions';
 import { verifyAdminCookie } from '../lib/auth';
-import { supabase } from '../lib/db';
+import { getSupabase } from '../lib/db';
 
 export const handler: Handler = async (event) => {
   if (!verifyAdminCookie(event.headers.cookie ?? event.headers.Cookie)) {
     return jsonResp(401, { error: 'Unauthorized' });
   }
+  const supabase = getSupabase();
   if (!supabase) return jsonResp(500, { error: 'Database not configured' });
 
   const limit = clamp(parseIntOr(event.queryStringParameters?.limit, 50), 1, 200);

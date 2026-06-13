@@ -18,16 +18,32 @@ export type DbBreakdown = {
   created_at: string;
 };
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_KEY;
-
-export const dbEnabled = Boolean(url && key);
-
-export const supabase: SupabaseClient | null = dbEnabled
-  ? createClient(url!, key!, {
+// Lazy init: in dev, Vite plugins load .env into process.env inside
+// `configResolved`, which runs AFTER this module is first imported. Reading
+// env eagerly here would lock in a null client. Defer until first access.
+let _client: SupabaseClient | null = null;
+let _initialized = false;
+function ensureInit(): void {
+  if (_initialized) return;
+  _initialized = true;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (url && key) {
+    _client = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
-    })
-  : null;
+    });
+  }
+}
+
+export function getSupabase(): SupabaseClient | null {
+  ensureInit();
+  return _client;
+}
+
+export function isDbEnabled(): boolean {
+  ensureInit();
+  return _client !== null;
+}
 
 // U+241E (RECORD SEPARATOR) — extremely unlikely to appear in any user query.
 const PATH_SEP = '␞';
@@ -38,6 +54,7 @@ export async function getCachedBreakdown(
   path: string[],
   ttlDays: number,
 ): Promise<DbBreakdown | null> {
+  const supabase = getSupabase();
   if (!supabase || ttlDays <= 0 || path.length === 0) return null;
   const sinceIso = new Date(Date.now() - ttlDays * 86_400_000).toISOString();
   const { data, error } = await supabase
@@ -63,6 +80,7 @@ export async function findBreakdown(
   model: string,
   path: string[],
 ): Promise<DbBreakdown | null> {
+  const supabase = getSupabase();
   if (!supabase || path.length === 0) return null;
   const { data, error } = await supabase
     .from('breakdowns')
@@ -89,6 +107,7 @@ export type InsertBreakdownInput = {
 };
 
 export async function insertBreakdown(input: InsertBreakdownInput): Promise<string | null> {
+  const supabase = getSupabase();
   if (!supabase) return null;
   // Use upsert on (model, path_key) so a race where two simultaneous misses
   // both try to insert resolves to a single row instead of a 409.
@@ -119,6 +138,7 @@ export type SearchMeta = {
 };
 
 export async function insertSearch(input: SearchMeta): Promise<void> {
+  const supabase = getSupabase();
   if (!supabase) return;
   const { error } = await supabase.from('searches').insert({
     ...input,

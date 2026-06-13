@@ -10,7 +10,7 @@ import {
 } from '../../src/lib/anthropicPricing';
 import {
   type Breakdown,
-  dbEnabled,
+  isDbEnabled,
   getCachedBreakdown,
   insertBreakdown,
   insertSearch,
@@ -132,7 +132,7 @@ export async function finalizeBreakdown(
   console.log(formatUsageLine(entry));
   console.log(JSON.stringify(entry));
 
-  if (!dbEnabled || req.path.length === 0) return;
+  if (!isDbEnabled() || req.path.length === 0) return;
   const parsed = parseBreakdown(completion);
   if (!parsed) {
     console.warn('[handleSearch] could not parse breakdown for cache; skipping persistence');

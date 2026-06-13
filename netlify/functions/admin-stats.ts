@@ -3,7 +3,7 @@
 // and the analytics surface evolves freely.
 import type { Handler } from '@netlify/functions';
 import { verifyAdminCookie } from '../lib/auth';
-import { supabase } from '../lib/db';
+import { getSupabase } from '../lib/db';
 
 const RANGES = { day: 1, week: 7, month: 30 } as const;
 type Range = keyof typeof RANGES | 'all';
@@ -28,6 +28,7 @@ export const handler: Handler = async (event) => {
   if (!verifyAdminCookie(event.headers.cookie ?? event.headers.Cookie)) {
     return jsonResp(401, { error: 'Unauthorized' });
   }
+  const supabase = getSupabase();
   if (!supabase) return jsonResp(500, { error: 'Database not configured' });
 
   const range = (event.queryStringParameters?.range ?? 'all') as Range;

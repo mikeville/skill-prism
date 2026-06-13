@@ -2,7 +2,7 @@
 // Each event is annotated with token cost (looked up via breakdown_id when cache_hit=false).
 import type { Handler } from '@netlify/functions';
 import { verifyAdminCookie } from '../lib/auth';
-import { supabase } from '../lib/db';
+import { getSupabase } from '../lib/db';
 
 type RawSearch = {
   id: string;
@@ -27,6 +27,7 @@ export const handler: Handler = async (event) => {
   if (!verifyAdminCookie(event.headers.cookie ?? event.headers.Cookie)) {
     return jsonResp(401, { error: 'Unauthorized' });
   }
+  const supabase = getSupabase();
   if (!supabase) return jsonResp(500, { error: 'Database not configured' });
 
   const limit = clamp(parseIntOr(event.queryStringParameters?.limit, 30), 1, 100);
