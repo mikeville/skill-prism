@@ -160,7 +160,7 @@ export function ExportPanel({
     status === 'rendering' ? 'Rendering…' : status === 'capturing' ? 'Capturing…' : 'Export';
 
   return (
-    <div className="flex flex-col gap-5 px-6 py-6">
+    <div className="flex flex-col gap-5 p-[var(--pane-pad,1.5rem)]">
       {withHeader && (
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-meta font-meta text-ink">EXPORT</h2>

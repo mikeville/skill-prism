@@ -411,6 +411,13 @@ function AppInner() {
             opacity: asideOpen ? 1 : 0,
             pointerEvents: asideOpen ? 'auto' : 'none',
             transition: `opacity ${PANEL_ANIM_MS}ms ${PANEL_ANIM_EASE}`,
+            // Desktop sidebar uses a uniform 2rem inset on all sides. The
+            // earlier attempt mirrored the page's left corner column on the
+            // right edge only, but the asymmetric padding read as off-balance
+            // against the empty space below the content. Consumed by
+            // InsightContent and ExportPanel via `p-[var(--pane-pad,1.5rem)]`,
+            // with mobile/modal falling back to 1.5rem.
+            ['--pane-pad' as string]: '2rem',
           }}
         >
           {exportOpen ? (
