@@ -21,11 +21,13 @@ const KIND_LABEL: Record<ResourceKind, string> = {
   person: 'PERSON',
   community: 'COMMUNITY',
   site: 'SITE',
+  skill: 'SKILL.MD',
 };
 
 // Resolves the target URL for a move's title link. Books always land on a
-// Goodreads search (no model-supplied URL needed); other kinds use the
-// model's url field when it's a real http(s) URL.
+// Goodreads search (no model-supplied URL needed); other kinds (including
+// skills, where the prompt feeds the skills.sh detail URL directly) use
+// the model's url field when it's a real http(s) URL.
 function resolveMoveUrl(move: {
   kind: ResourceKind;
   title: string;
@@ -153,7 +155,10 @@ export function InsightContent({
   onClose,
   compact,
 }: Props) {
-  const pad = compact ? 'px-4 py-4' : 'px-6 py-6';
+  // Padding consumes --pane-pad when present (desktop sidebar sets it to 2rem
+  // so the pane has a uniform inset on all four sides). Falls back to 1.5rem
+  // in mobile and modal contexts.
+  const pad = compact ? 'p-4' : 'p-[var(--pane-pad,1.5rem)]';
   const sectionGap = 'gap-5';
 
   // Per-move expanded state. Collapsed by default — the panel feels lighter

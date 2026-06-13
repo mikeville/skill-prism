@@ -13,16 +13,26 @@
 // lists are injected as scope anti-targets — resources scoped to any of
 // them are rejected.
 
+type AvailableSkill = {
+  display_name: string;
+  description: string;
+  install_count: number;
+  skills_sh_url: string;
+  install_command: string;
+};
+
 export function buildInsightPrompt({
   path,
   term,
   subDisciplines,
   adjacentDisciplines,
+  availableSkills,
 }: {
   path: string[];
   term: string;
   subDisciplines: string[];
   adjacentDisciplines: string[];
+  availableSkills?: AvailableSkill[];
 }): string {
   const pathStr =
     path.length > 0
@@ -45,16 +55,40 @@ export function buildInsightPrompt({
 Reject any candidate whose primary subject is one of the trap areas above. Three quick checks per candidate: (a) Would a practitioner of a trap area use this resource as their primary reference? If yes, REJECT. (b) Does the title contain a trap-area word or near-synonym (e.g., "type" → typography; "animator" → traditional animation)? If yes, REJECT. (c) Can you name what aspect of THIS topic — not a trap area — this resource covers? If not, REJECT.`
     : '';
 
-  return `You are helping someone working toward mastery of a specific topic. They're exploring it in a fractal topic-decomposition app and have asked for a concrete path forward. Answer the way a thoughtful practitioner would if a curious smart friend asked them where to start with this topic — not the most-cited resources from a textbook, but the ones the practitioner would genuinely recommend after thinking about it. Respond with ONLY valid JSON, no preamble, no markdown fences.${scopeTrapsBlock}
+  // When the local catalog has candidate skills that match the topic, list
+  // them as an OPTIONAL fifth kind. The model picks one only when a
+  // practitioner shortcut beats the book/course/person/site framing for
+  // this specific topic — there is no quota. Zero skills is the correct
+  // answer for most topics.
+  const skills = (availableSkills ?? []).filter((s) => s.display_name && s.description);
+  const skillsBlock = skills.length > 0
+    ? `\n\nAVAILABLE SKILLS (Claude agent skills the user can install today). Treat these as candidates for AT MOST one of your three moves — only when the practitioner-shortcut framing for this topic is genuinely stronger than a book/course/person/site recommendation. Picking zero is fine and common.
+${skills
+  .map(
+    (s) =>
+      `- [${s.display_name}] ${s.description.replace(/\s+/g, ' ').slice(0, 280)} (${s.install_count.toLocaleString()} installs). url: ${s.skills_sh_url}. install: ${s.install_command}.`,
+  )
+  .join('\n')}
+
+When you do pick a skill move, the rules are different from book/course/person/site:
+- kind: "skill"
+- title: the skill's display name as given in brackets above (e.g. "find-skills"). Do not invent.
+- action: ONE TERSE SENTENCE — max 18 words — describing what the skill itself DOES, compressed from its description above. Echo the skill's own framing of its capability; do not reinterpret it for this topic. Do NOT mention install commands, package managers, "Claude", "Anthropic", "agent", or how the skill is delivered — the link carries that context. Skills are tools; describe the tool, not the path to use it.
+- url: copy the skills.sh URL given above verbatim. Do not substitute, do not guess a different URL.
+
+A skill belongs in the list only if its description maps onto a real practitioner task within THIS topic. "It mentions a related word" is not enough. If none of the candidates clear that bar, do not include a skill move.`
+    : '';
+
+  return `You are helping someone working toward mastery of a specific topic. They're exploring it in a fractal topic-decomposition app and have asked for a concrete path forward. Answer the way a thoughtful practitioner would if a curious smart friend asked them where to start with this topic — not the most-cited resources from a textbook, but the ones the practitioner would genuinely recommend after thinking about it. Respond with ONLY valid JSON, no preamble, no markdown fences.${scopeTrapsBlock}${skillsBlock}
 
 Schema:
 {
   "framing": "ONE SENTENCE naming what mastery of this term actually requires you to grasp — a stance, distinction, or non-obvious truth that frames the WHY behind the moves that follow. Plain sentence-case prose. Not a definition.",
   "moves": [
     {
-      "kind": "book" | "course" | "person" | "site",
+      "kind": "book" | "course" | "person" | "site" | "skill",
       "title": "Name of the resource the move pivots around.",
-      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice), describing what to do and the payoff. Plain sentence-case prose. Be brief.",
+      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice / install), describing what to do and the payoff. Plain sentence-case prose. Be brief.",
       "url": "Canonical URL — see URL rules below. OMIT this field entirely if you are not confident in the exact URL."
     }
   ],
@@ -74,7 +108,8 @@ URL field rules (read carefully — hallucinated URLs are worse than missing URL
 - "person": link to wherever the person is MOST active — their X/Twitter, personal site, Substack, podcast page, studio bio, YouTube channel. Pick ONE single most useful link, not a profile of links.
 - "course": URL of the course's landing page (e.g., on School of Motion, Coursera, YouTube playlist URL, university course page).
 - "book": OMIT the url field entirely. The client constructs a Goodreads search link from the title.
-- ACCURACY OVER COVERAGE: include url ONLY when you are confident the URL is correct. If you're guessing at a URL or can't recall the exact domain/path, OMIT the url field. A missing url is fine; a wrong url is a broken link.
+- "skill": REQUIRED — copy the skills.sh URL given for this skill in the AVAILABLE SKILLS block above, verbatim. This is not a guess; the URL is supplied. Never omit it for a skill move.
+- ACCURACY OVER COVERAGE: include url ONLY when you are confident the URL is correct. If you're guessing at a URL or can't recall the exact domain/path, OMIT the url field. A missing url is fine; a wrong url is a broken link. (Does not apply to "skill" — its URL is supplied above and must always be copied.)
 
 MOVES:
 - EXACTLY 3 items. Each cites one real, named resource. Do not invent titles or misattribute authorship. Do not repeat a resource across moves.

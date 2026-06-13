@@ -3,7 +3,7 @@ import { buildSubDisciplinePrompt } from './subDisciplinePrompt';
 import { buildCritiquePrompt } from './critiquePrompt';
 import { streamCompletion } from './streamSse';
 
-export type ResourceKind = 'book' | 'course' | 'person' | 'community' | 'site';
+export type ResourceKind = 'book' | 'course' | 'person' | 'community' | 'site' | 'skill';
 
 export type InsightMove = {
   kind: ResourceKind;
@@ -11,8 +11,22 @@ export type InsightMove = {
   action: string;
   // Optional canonical URL. The model populates it for site/person/course
   // when confident; the UI constructs a Goodreads search link for books.
-  // Missing is fine — UI falls back to plain text.
+  // For skills, the prompt provides the skills.sh detail URL up front so
+  // the model never has to guess. Missing is fine — UI falls back to plain text.
   url?: string;
+};
+
+// One row from /api/skills-relevant. The shape matches netlify/lib/
+// skillsRetrieval.ts:SkillCandidate, redeclared client-side to avoid
+// importing server code into the bundle.
+export type SkillCandidate = {
+  slug: string;
+  display_name: string;
+  description: string;
+  install_count: number;
+  skills_sh_url: string;
+  install_command: string;
+  score: number;
 };
 
 export type Insight = {
@@ -32,6 +46,7 @@ const VALID_KINDS: ReadonlySet<ResourceKind> = new Set([
   'person',
   'community',
   'site',
+  'skill',
 ]);
 
 type ScopeTraps = {
@@ -56,14 +71,20 @@ export async function fetchInsight({
   // replacing it with the resolved return value.
   onPartial?: (partial: Insight) => void;
 }): Promise<Insight> {
-  // Stages 1 and 2 run in PARALLEL. Generation runs with empty scope traps
-  // (it doesn't yet know what the classifier found) — critique is the safety
-  // net for scope failures. This trades a small drop in generation base
-  // quality for a 3s latency win, since most generations are clean and
-  // critique only fires when the heuristic flags suspicion.
+  // Stages 1, 2, and 2b run in PARALLEL. Generation runs with empty scope
+  // traps (it doesn't yet know what the classifier found) — critique is
+  // the safety net for scope failures. Skill candidates are fetched from
+  // the local Supabase catalog and injected into the *generation* prompt,
+  // so generation waits briefly for them before kicking off. The network
+  // calls themselves stay parallel; generation typically starts within a
+  // few hundred ms once candidates resolve, and model latency dominates
+  // the user-visible wait anyway.
+  const skillCandidatesP = fetchSkillCandidates({ term, path }).catch(() => []);
   const [traps, initial] = await Promise.all([
     fetchScopeTraps({ term }).catch(() => EMPTY_TRAPS),
-    fetchGeneration({ path, term, traps: EMPTY_TRAPS, onPartial }),
+    skillCandidatesP.then((availableSkills) =>
+      fetchGeneration({ path, term, traps: EMPTY_TRAPS, availableSkills, onPartial }),
+    ),
   ]);
 
   // Stage 3: conditional critique. Run the adversarial editor pass only when
@@ -108,6 +129,9 @@ function critiqueNeeded(traps: ScopeTraps, insight: Insight, term: string): bool
     topicWords.some((tw) => commonPrefixLength(trapWord, tw) >= 3);
 
   for (const move of insight.moves) {
+    // Skill moves are tools, not learning resources, so the
+    // "wrong-discipline reference material" check doesn't apply to them.
+    if (move.kind === 'skill') continue;
     const titleWords = move.title.toLowerCase().match(/[a-z]+/g) ?? [];
     for (const trap of allTraps) {
       const trapWords = trap
@@ -132,11 +156,13 @@ async function fetchGeneration({
   path,
   term,
   traps,
+  availableSkills,
   onPartial,
 }: {
   path: string[];
   term: string;
   traps: ScopeTraps;
+  availableSkills?: SkillCandidate[];
   onPartial?: (partial: Insight) => void;
 }): Promise<Insight> {
   const prompt = buildInsightPrompt({
@@ -144,6 +170,7 @@ async function fetchGeneration({
     term,
     subDisciplines: traps.subDisciplines,
     adjacentDisciplines: traps.adjacentDisciplines,
+    availableSkills,
   });
 
   // Non-streaming path (used by classifier and critique stages, and by any
@@ -292,6 +319,23 @@ async function fetchCritique({
   } catch {
     return candidate;
   }
+}
+
+async function fetchSkillCandidates({
+  term,
+  path,
+}: {
+  term: string;
+  path: string[];
+}): Promise<SkillCandidate[]> {
+  const params = new URLSearchParams({ term });
+  if (path.length > 0) params.set('path', path.join('|'));
+  const r = await fetch(`api/skills-relevant?${params.toString()}`);
+  if (!r.ok) return [];
+  const body = (await r.json().catch(() => ({}))) as {
+    candidates?: SkillCandidate[];
+  };
+  return Array.isArray(body.candidates) ? body.candidates : [];
 }
 
 async function fetchScopeTraps({ term }: { term: string }): Promise<ScopeTraps> {
