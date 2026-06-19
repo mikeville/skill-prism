@@ -278,6 +278,26 @@ function parsePartialInsight(buffer: string): Insight {
     }
   }
 
+  // Top-level "skill" field — appended as a 4th move (kind: 'skill') when
+  // the streaming buffer has progressed far enough to contain it. The skill
+  // typically arrives last in the JSON, so for most of the stream this is a
+  // no-op; the skill row pops in once it lands.
+  const skillKeyIdx = buffer.indexOf('"skill"');
+  if (skillKeyIdx >= 0) {
+    const skillScope = buffer.slice(skillKeyIdx);
+    const skillRe = /\{\s*"title"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"action"\s*:\s*"((?:[^"\\]|\\.)*)"\s*(?:,\s*"url"\s*:\s*"((?:[^"\\]|\\.)*)"\s*)?\}/;
+    const sm = skillScope.match(skillRe);
+    if (sm) {
+      const url = sm[3] ? unescape(sm[3]).trim() : undefined;
+      moves.push({
+        kind: 'skill',
+        title: unescape(sm[1]),
+        action: unescape(sm[2]),
+        ...(url ? { url } : {}),
+      });
+    }
+  }
+
   return { framing, moves };
 }
 
@@ -397,7 +417,12 @@ function parseScopeTraps(raw: string): ScopeTraps {
 
 function parseInsight(raw: string): Insight {
   const cleaned = extractLastJsonObject(raw);
-  let parsed: { framing?: unknown; moves?: unknown; wikipedia_title?: unknown };
+  let parsed: {
+    framing?: unknown;
+    moves?: unknown;
+    skill?: unknown;
+    wikipedia_title?: unknown;
+  };
   try {
     parsed = JSON.parse(cleaned);
   } catch {
@@ -431,6 +456,13 @@ function parseInsight(raw: string): Insight {
         .slice(0, 3)
     : [];
 
+  // Top-level "skill" field is the additive 4th slot. When present, append it
+  // to the moves list as kind: 'skill' so the UI renders it as a fourth row.
+  // The presence of this row is itself the editorial signal that a skill was
+  // found — there is no 4th slot when no candidate cleared the prompt's bar.
+  const skillMove = parseSkillField(parsed.skill);
+  if (skillMove) moves.push(skillMove);
+
   // wikipedia_title may arrive as a string, JSON null, or be absent. Treat
   // empty strings and the literal "null" as null too (defensive against a
   // model stringifying it).
@@ -442,4 +474,15 @@ function parseInsight(raw: string): Insight {
       : null;
 
   return { framing, moves, wikipediaTitle };
+}
+
+function parseSkillField(raw: unknown): InsightMove | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as { title?: unknown; action?: unknown; url?: unknown };
+  const title = typeof obj.title === 'string' ? obj.title.trim() : '';
+  const action = typeof obj.action === 'string' ? obj.action.trim() : '';
+  const urlRaw = typeof obj.url === 'string' ? obj.url.trim() : '';
+  if (!title || !action) return null;
+  const url = /^https?:\/\//i.test(urlRaw) ? urlRaw : undefined;
+  return { kind: 'skill', title, action, ...(url ? { url } : {}) };
 }

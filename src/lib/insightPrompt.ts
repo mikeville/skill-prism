@@ -54,14 +54,13 @@ export function buildInsightPrompt({
 Reject any candidate whose primary subject is one of the trap areas above. Three quick checks per candidate: (a) Would a practitioner of a trap area use this resource as their primary reference? If yes, REJECT. (b) Does the title contain a trap-area word or near-synonym (e.g., "type" → typography; "animator" → traditional animation)? If yes, REJECT. (c) Can you name what aspect of THIS topic — not a trap area — this resource covers? If not, REJECT.`
     : '';
 
-  // When the local catalog has candidate skills that match the topic, list
-  // them as an OPTIONAL fifth kind. The model picks one only when a
-  // practitioner shortcut beats the book/course/person/site framing for
-  // this specific topic — there is no quota. Zero skills is the correct
-  // answer for most topics.
+  // Skills get a SEPARATE optional 4th slot — not competing for the three
+  // move slots. The model picks at most ONE skill that's a genuine fit for
+  // the topic. If none fit, omit the skill field. The presence of a 4th
+  // item in the UI is itself a signal to the user that a skill was found.
   const skills = (availableSkills ?? []).filter((s) => s.display_name);
   const skillsBlock = skills.length > 0
-    ? `\n\nAVAILABLE SKILLS (Claude agent skills the user can install today, returned by skills.sh's semantic search for this term, ranked best-match first). Treat these as candidates for AT MOST one of your three moves — only when the practitioner-shortcut framing for this topic is genuinely stronger than a book/course/person/site recommendation. Picking zero is fine and common.
+    ? `\n\nAVAILABLE SKILLS (Claude agent skills the user can install today, returned by skills.sh's semantic search for this term, ranked best-match first). Pick AT MOST ONE as a separate 4th slot below the three moves — not as a substitute for any of them.
 ${skills
   .map(
     (s) =>
@@ -69,13 +68,15 @@ ${skills
   )
   .join('\n')}
 
-When you do pick a skill move, the rules are different from book/course/person/site:
-- kind: "skill"
+Selection rules (apply in order):
+1. FIT — does the skill's name plausibly map onto a real practitioner task within THIS topic? Semantic ranking is a hint, not a guarantee. Reject candidates whose names are about a different field or are too generic to mean anything ("agent-skills", "my-skills").
+2. AMONG FITS — prefer the candidate that combines the strongest topical match with the higher install count. Install count is a quality signal: a 50k-install skill that fits is a better pick than a 50-install skill that fits slightly better.
+3. If no candidate clears the FIT bar, OMIT the skill field entirely. A missing 4th slot is the correct answer for most topics.
+
+When you do pick a skill, populate the top-level "skill" field with:
 - title: the skill's display name as given in brackets above (e.g. "find-skills"). Do not invent.
 - action: ONE TERSE SENTENCE — max 18 words — describing what the skill itself does for this topic, inferred from its name plus the term being explored. Do NOT mention install commands, package managers, "Claude", "Anthropic", "agent", or how the skill is delivered — the link carries that context. Skills are tools; describe the tool, not the path to use it.
-- url: copy the skills.sh URL given above verbatim. Do not substitute, do not guess a different URL.
-
-A skill belongs in the list only if its name plausibly maps onto a real practitioner task within THIS topic. The list is already semantically ranked, but the top result is not guaranteed to be a fit — judge each candidate against the topic. If none clear the bar, do not include a skill move.`
+- url: copy the skills.sh URL given above verbatim. Do not substitute, do not guess a different URL.`
     : '';
 
   return `You are helping someone working toward mastery of a specific topic. They're exploring it in a fractal topic-decomposition app and have asked for a concrete path forward. Answer the way a thoughtful practitioner would if a curious smart friend asked them where to start with this topic — not the most-cited resources from a textbook, but the ones the practitioner would genuinely recommend after thinking about it. Respond with ONLY valid JSON, no preamble, no markdown fences.${scopeTrapsBlock}${skillsBlock}
@@ -85,14 +86,21 @@ Schema:
   "framing": "ONE SENTENCE naming what mastery of this term actually requires you to grasp — a stance, distinction, or non-obvious truth that frames the WHY behind the moves that follow. Plain sentence-case prose. Not a definition.",
   "moves": [
     {
-      "kind": "book" | "course" | "person" | "site" | "skill",
+      "kind": "book" | "course" | "person" | "site",
       "title": "Name of the resource the move pivots around.",
-      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice / install), describing what to do and the payoff. Plain sentence-case prose. Be brief.",
+      "action": "ONE TERSE SENTENCE — MAX 15 WORDS — imperative voice (read / watch / follow / build / join / practice), describing what to do and the payoff. Plain sentence-case prose. Be brief.",
       "url": "Canonical URL — see URL rules below. OMIT this field entirely if you are not confident in the exact URL."
     }
   ],
+  "skill": {
+    "title": "Display name of the chosen skill (from the AVAILABLE SKILLS list above).",
+    "action": "ONE TERSE SENTENCE — MAX 18 WORDS — what the skill does for this topic.",
+    "url": "The skills.sh URL given for this skill, copied verbatim."
+  },
   "wikipedia_title": "EXACT title of the single English Wikipedia article a curious learner of THIS term, in THIS context, would most want to land on. Use Wikipedia's canonical capitalization (e.g., \\"Personal finance\\", \\"Gradient descent\\", \\"Cognitive behavioral therapy\\"). See wikipedia_title rules below. Use JSON null when no real article fits."
 }
+
+The "skill" field is OPTIONAL — omit it entirely (do not include the key) when no candidate clears the FIT bar above, or when no AVAILABLE SKILLS block was provided.
 
 wikipedia_title rules (read carefully — a wrong link is worse than no link, but a missing link on a real topic is also bad):
 - Pick the article a thoughtful person would actually want for THIS term in THIS context — not the literal string match. For "make money" framed as a problem of value capture / income, that's "Personal finance" or "Income", NOT the Go-go album titled "Make Money".
@@ -107,12 +115,11 @@ URL field rules (read carefully — hallucinated URLs are worse than missing URL
 - "person": link to wherever the person is MOST active — their X/Twitter, personal site, Substack, podcast page, studio bio, YouTube channel. Pick ONE single most useful link, not a profile of links.
 - "course": URL of the course's landing page (e.g., on School of Motion, Coursera, YouTube playlist URL, university course page).
 - "book": OMIT the url field entirely. The client constructs a Goodreads search link from the title.
-- "skill": REQUIRED — copy the skills.sh URL given for this skill in the AVAILABLE SKILLS block above, verbatim. This is not a guess; the URL is supplied. Never omit it for a skill move.
-- ACCURACY OVER COVERAGE: include url ONLY when you are confident the URL is correct. If you're guessing at a URL or can't recall the exact domain/path, OMIT the url field. A missing url is fine; a wrong url is a broken link. (Does not apply to "skill" — its URL is supplied above and must always be copied.)
+- ACCURACY OVER COVERAGE: include url ONLY when you are confident the URL is correct. If you're guessing at a URL or can't recall the exact domain/path, OMIT the url field. A missing url is fine; a wrong url is a broken link. (Does not apply to the top-level "skill" field — its URL is supplied in the AVAILABLE SKILLS block and must always be copied.)
 
 MOVES:
 - EXACTLY 3 items. Each cites one real, named resource. Do not invent titles or misattribute authorship. Do not repeat a resource across moves.
-- Pick the 3 resources that would genuinely serve a curious smart friend starting on this topic, drawn from the four available kinds (book, course, person, site). No kind is privileged — pick the strongest real answers for THIS topic, regardless of type.
+- Pick the 3 resources that would genuinely serve a curious smart friend starting on this topic, drawn from the four kinds (book, course, person, site). No kind is privileged — pick the strongest real answers for THIS topic, regardless of type. The "skill" field is separate and does not count toward these three.
 - BIAS toward a mix of kinds when the field offers strong real answers across multiple kinds. A book + course + person is often a strong shape — but only when each is genuinely the right answer here. Do not force a third kind in just to satisfy diversity.
 - Repeating a kind is acceptable when the duplicates are genuinely complementary — e.g. two living practitioners whose work represents different, complementary perspectives on this topic. Avoid duplication that's just two takes on the same lane.
 - Never include a weak resource just to hit 3 moves across 3 different kinds — drop the weak slot for a stronger one of a kind you've already used.

@@ -11,7 +11,7 @@
 
 import type { Insight } from './insightApi';
 
-const PREFIX = 'skill-prism:insight:v18:';
+const PREFIX = 'skill-prism:insight:v19:';
 
 function insightKey(term: string): string {
   return term.toLowerCase().trim();
