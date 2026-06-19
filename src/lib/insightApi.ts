@@ -79,7 +79,7 @@ export async function fetchInsight({
   // calls themselves stay parallel; generation typically starts within a
   // few hundred ms once candidates resolve, and model latency dominates
   // the user-visible wait anyway.
-  const skillCandidatesP = fetchSkillCandidates({ term, path }).catch(() => []);
+  const skillCandidatesP = fetchSkillCandidates({ term }).catch(() => []);
   const [traps, initial] = await Promise.all([
     fetchScopeTraps({ term }).catch(() => EMPTY_TRAPS),
     skillCandidatesP.then((availableSkills) =>
@@ -321,15 +321,8 @@ async function fetchCritique({
   }
 }
 
-async function fetchSkillCandidates({
-  term,
-  path,
-}: {
-  term: string;
-  path: string[];
-}): Promise<SkillCandidate[]> {
+async function fetchSkillCandidates({ term }: { term: string }): Promise<SkillCandidate[]> {
   const params = new URLSearchParams({ term });
-  if (path.length > 0) params.set('path', path.join('|'));
   const r = await fetch(`api/skills-relevant?${params.toString()}`);
   if (!r.ok) return [];
   const body = (await r.json().catch(() => ({}))) as {

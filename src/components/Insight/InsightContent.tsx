@@ -271,6 +271,14 @@ export function InsightContent({
                       </span>
                       <span className={`${PROSE_CLASS} min-w-0 text-body`} style={titleStyle}>
                         {m.title}
+                        {m.kind === 'skill' && (
+                          <span
+                            className="ml-1.5 text-meta font-meta text-ink-mut"
+                            style={{ fontVariationSettings: '"wght" 400' }}
+                          >
+                            · via skills.sh
+                          </span>
+                        )}
                       </span>
                       {isExpanded && (
                         <p

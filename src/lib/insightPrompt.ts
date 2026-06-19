@@ -15,7 +15,6 @@
 
 type AvailableSkill = {
   display_name: string;
-  description: string;
   install_count: number;
   skills_sh_url: string;
   install_command: string;
@@ -60,23 +59,23 @@ Reject any candidate whose primary subject is one of the trap areas above. Three
   // practitioner shortcut beats the book/course/person/site framing for
   // this specific topic — there is no quota. Zero skills is the correct
   // answer for most topics.
-  const skills = (availableSkills ?? []).filter((s) => s.display_name && s.description);
+  const skills = (availableSkills ?? []).filter((s) => s.display_name);
   const skillsBlock = skills.length > 0
-    ? `\n\nAVAILABLE SKILLS (Claude agent skills the user can install today). Treat these as candidates for AT MOST one of your three moves — only when the practitioner-shortcut framing for this topic is genuinely stronger than a book/course/person/site recommendation. Picking zero is fine and common.
+    ? `\n\nAVAILABLE SKILLS (Claude agent skills the user can install today, returned by skills.sh's semantic search for this term, ranked best-match first). Treat these as candidates for AT MOST one of your three moves — only when the practitioner-shortcut framing for this topic is genuinely stronger than a book/course/person/site recommendation. Picking zero is fine and common.
 ${skills
   .map(
     (s) =>
-      `- [${s.display_name}] ${s.description.replace(/\s+/g, ' ').slice(0, 280)} (${s.install_count.toLocaleString()} installs). url: ${s.skills_sh_url}. install: ${s.install_command}.`,
+      `- [${s.display_name}] (${s.install_count.toLocaleString()} installs). url: ${s.skills_sh_url}. install: ${s.install_command}.`,
   )
   .join('\n')}
 
 When you do pick a skill move, the rules are different from book/course/person/site:
 - kind: "skill"
 - title: the skill's display name as given in brackets above (e.g. "find-skills"). Do not invent.
-- action: ONE TERSE SENTENCE — max 18 words — describing what the skill itself DOES, compressed from its description above. Echo the skill's own framing of its capability; do not reinterpret it for this topic. Do NOT mention install commands, package managers, "Claude", "Anthropic", "agent", or how the skill is delivered — the link carries that context. Skills are tools; describe the tool, not the path to use it.
+- action: ONE TERSE SENTENCE — max 18 words — describing what the skill itself does for this topic, inferred from its name plus the term being explored. Do NOT mention install commands, package managers, "Claude", "Anthropic", "agent", or how the skill is delivered — the link carries that context. Skills are tools; describe the tool, not the path to use it.
 - url: copy the skills.sh URL given above verbatim. Do not substitute, do not guess a different URL.
 
-A skill belongs in the list only if its description maps onto a real practitioner task within THIS topic. "It mentions a related word" is not enough. If none of the candidates clear that bar, do not include a skill move.`
+A skill belongs in the list only if its name plausibly maps onto a real practitioner task within THIS topic. The list is already semantically ranked, but the top result is not guaranteed to be a fit — judge each candidate against the topic. If none clear the bar, do not include a skill move.`
     : '';
 
   return `You are helping someone working toward mastery of a specific topic. They're exploring it in a fractal topic-decomposition app and have asked for a concrete path forward. Answer the way a thoughtful practitioner would if a curious smart friend asked them where to start with this topic — not the most-cited resources from a textbook, but the ones the practitioner would genuinely recommend after thinking about it. Respond with ONLY valid JSON, no preamble, no markdown fences.${scopeTrapsBlock}${skillsBlock}
