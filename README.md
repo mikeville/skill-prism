@@ -1,6 +1,6 @@
 # Skill Prism
 
-A fractal topic browser and learning tool. Type a topic, Claude returns a Harada-style 9×9 decomposition: 8 main sub-skills around the centre, 8 sub-sub-skills under each. Tap any cell to descend into it; the next decomposition takes its place. The URL hash tracks where you are, so every drill-down is a shareable link. Each cell has a "now what?" affordance that surfaces three concrete first moves toward mastering the term — a book, a course, a person to follow, a site — drawn from a thoughtful-practitioner frame.
+A topic exploder and learning tool. Type a topic, Claude returns a Harada-style 9×9 decomposition: 8 main sub-skills around the centre, 8 sub-sub-skills under each. Tap any cell to descend into it; the next decomposition takes its place. The URL hash tracks where you are, so every drill-down is a shareable link. Each cell has a "now what?" affordance that surfaces three concrete first moves toward mastering the term — a book, a course, a person to follow, a site — drawn from a thoughtful-practitioner frame.
 
 ## Typography notes
 

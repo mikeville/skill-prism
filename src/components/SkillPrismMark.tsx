@@ -7,7 +7,7 @@ export const SKILL_PRISM_MARK = {
   family: ANYBODY.family,
   fontSize: '12px',
   variationSettings: '"wdth" 100, "wght" 800',
-  tagline: 'FRACTAL TOPIC BROWSER',
+  tagline: 'TOPIC EXPLODER',
   taglineVariationSettings: '"wdth" 100, "wght" 400',
 } as const;
 
