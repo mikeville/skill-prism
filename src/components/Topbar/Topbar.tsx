@@ -72,13 +72,19 @@ export function Topbar({
         className="justify-self-start"
         style={{ animation: 'brand-enter 220ms ease-out both' }}
       >
-        <button
-          type="button"
-          onClick={onReset}
+        <a
+          href="/"
+          onClick={(e) => {
+            // Let the browser handle modifier/middle clicks so cmd/ctrl-click
+            // opens in a new tab. Plain left click resets in place.
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            e.preventDefault();
+            onReset();
+          }}
           className="text-meta font-meta text-ink-mut hover:opacity-60 transition-opacity duration-hover focus-ring"
         >
           <SkillPrismMark style={{ transform: 'translateY(-1px)' }} />
-        </button>
+        </a>
       </span>
       <div className="min-w-0 w-full flex justify-center">
         {showCrumbs && <Breadcrumb path={path} onJump={onJump} />}
