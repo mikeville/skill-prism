@@ -11,12 +11,18 @@ A topic exploder and learning tool. Type a topic, Claude returns a Harada-style 
 
 ## The insight pipeline
 
-Clicking the "now what?" icon on any cell opens a side panel with a one-sentence framing of what mastery of the term requires, plus exactly three first moves. Behind the panel is a two-stage pipeline designed to fight a specific failure mode: scope drift.
+Clicking the "now what?" icon on any cell opens a side panel with a one-sentence framing of what mastery of the term requires, three first moves (book / course / person / site), and — when a genuine fit exists — an additional fourth row surfacing a relevant Claude skill from [skills.sh](https://skills.sh). Behind the panel is a two-stage pipeline designed to fight a specific failure mode: scope drift.
 
-- **Stage 1 (parallel):** a scope-trap classifier ([src/lib/subDisciplinePrompt.ts](src/lib/subDisciplinePrompt.ts)) lists named sub-disciplines *within* the topic and *adjacent* disciplines whose canonical resources commonly get mis-recommended for it. In parallel, the generation prompt ([src/lib/insightPrompt.ts](src/lib/insightPrompt.ts)) runs and streams partial moves into the UI.
-- **Stage 2 (conditional):** a lightweight heuristic ([src/lib/insightApi.ts](src/lib/insightApi.ts)) checks generated titles against the trap lists. If anything looks suspicious, an adversarial editor pass ([src/lib/critiquePrompt.ts](src/lib/critiquePrompt.ts)) audits all three moves for scope failures and replaces any that fail.
+- **Stage 1 (parallel):** a scope-trap classifier ([src/lib/subDisciplinePrompt.ts](src/lib/subDisciplinePrompt.ts)) lists named sub-disciplines *within* the topic and *adjacent* disciplines whose canonical resources commonly get mis-recommended for it. At the same time, the client hits `/api/skills-relevant` to fetch ranked skill candidates from skills.sh's semantic search (see [Skill candidates](#skill-candidates) below). Both feed the generation prompt ([src/lib/insightPrompt.ts](src/lib/insightPrompt.ts)), which streams partial moves into the UI.
+- **Stage 2 (conditional):** a lightweight heuristic ([src/lib/insightApi.ts](src/lib/insightApi.ts)) checks generated titles against the trap lists. If anything looks suspicious, an adversarial editor pass ([src/lib/critiquePrompt.ts](src/lib/critiquePrompt.ts)) audits the three core moves for scope failures and replaces any that fail.
 
-The trade is a small drop in average generation quality (it runs without yet knowing the trap list) for a faster perceived response, with the critique pass as the safety net.
+The trade is a small drop in average generation quality (the first pass runs without yet knowing the trap list) for a faster perceived response, with the critique pass as the safety net.
+
+### Skill candidates
+
+The skill row is a separate optional 4th slot — it never displaces the three editorial moves. The prompt is asked to filter candidates by fit (does the skill plausibly map to a real practitioner task in this topic?) and then prefer higher install counts. If no candidate clears the bar, the row is omitted; the *presence* of the row is itself the editorial signal that a relevant skill was found.
+
+Candidates come from a small companion service (`skill-prism-skills-worker`, deployed on Vercel) which proxies skills.sh's official `/api/v1/skills/search` behind a shared secret. The proxy is reachable here as `/api/skills-relevant`. If it's unreachable or unconfigured, the insight panel still renders — just with the three core moves only.
 
 ## Stack
 
@@ -24,6 +30,7 @@ The trade is a small drop in average generation quality (it runs without yet kno
 - Tailwind for utilities
 - Hash-routed paths (`#/segment-1/segment-2`) for shareable URLs and browser back/forward
 - Netlify Functions (v2 / Web Fetch) proxy `/api/complete` and `/api/insight` to Anthropic, streaming SSE through
+- `/api/skills-relevant` proxies a tiny Vercel worker that fronts skills.sh's semantic search
 - LocalStorage cache on the client; optional Supabase-backed cache + analytics on the server (gated on env vars)
 
 ## Local development
@@ -103,10 +110,12 @@ netlify/
     complete.ts                 # /api/complete handler — dev + prod, streaming
     insight.ts                  # /api/insight handler — streaming
     log-event.ts                # /api/log-event — cache-hit logging from the client
+    skills-relevant.ts          # /api/skills-relevant — proxy to skills.sh via the Vercel worker
     admin-*.ts                  # /admin dashboard endpoints (login, me, sessions, events, stats)
   lib/
     handleSearch.ts             # shared cache → Anthropic → DB pipeline
     handleLogEvent.ts           # shared cache-hit log path
+    skillsRetrieval.ts          # calls the skills-worker proxy; shapes results for the prompt
     db.ts                       # Supabase client + typed wrappers
     auth.ts                     # HMAC-signed admin cookie
 
@@ -114,9 +123,12 @@ vite-plugins/
   api-complete.ts               # mirrors complete.ts inside the Vite dev server
   api-insight.ts                # mirrors insight.ts
   api-log-event.ts              # mirrors log-event.ts
+  api-skills-relevant.ts        # mirrors skills-relevant.ts
   api-admin.ts                  # mirrors the admin endpoints
   tailwind-config-hmr.ts        # hot-reload tailwind.config.cjs edits
 ```
+
+Every `/api/*` endpoint exists in three places: the Netlify function, the Vite dev mirror, and a registration in `vite.config.ts`. `npm run dev` does not run Netlify Functions, so the dev mirror is the one serving requests in local development.
 
 `SkillSidebar` and `lib/exportSkill.ts` are intentionally dormant — scaffolding for a future "export this branch as a Claude skill" flow, signposted but not wired into the UI.
 
@@ -151,6 +163,7 @@ Visit `/admin` in dev or prod. Paste the value of `ADMIN_TOKEN` to authenticate;
    - `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` (optional; enables server cache + dashboard)
    - `ADMIN_TOKEN` (required to use `/admin` when Supabase is set)
    - `CACHE_TTL_DAYS` (optional; default 30)
+   - `SKILLS_PROXY_URL` + `SKILLS_PROXY_SECRET` (optional; enables the skills 4th-slot row — point at your deployed skill-prism-skills-worker)
 3. Build command and publish dir come from `netlify.toml`.
 
 ## License
