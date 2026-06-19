@@ -1,62 +1,34 @@
-// Netlify Function — GET /api/skills-relevant?term=X&path=A|B|C
+// Netlify Function — GET /api/skills-relevant?term=X
 //
-// Returns the top N candidate skills (default 8) from public.skills_catalog
-// ranked against the term + breadcrumb path. The client passes these into
-// buildInsightPrompt so the generation model can choose whether any of them
-// belongs in the three move slots.
+// Returns ranked candidate skills from skills.sh's semantic search, via the
+// skill-prism-skills-worker proxy. The client passes these into
+// buildInsightPrompt so the generation model can choose whether any belongs
+// in the three move slots.
 //
-// Degrades gracefully when Supabase isn't configured (returns `{ candidates:
-// [] }`) so the insight panel still works without the catalog wired up.
+// The `path` query param accepted by previous versions is no longer used:
+// semantic search treats the bare term well enough that the breadcrumb
+// context is no longer load-bearing, and concatenating it tended to drift
+// the query away from the user's actual intent.
 
 import type { Context } from '@netlify/functions';
-import { getSupabase } from '../lib/db';
-import { scoreCandidates, type CatalogSkill } from '../lib/skillsRetrieval';
-
-// In-memory cache of the full catalog within a single Netlify Function
-// instance. Netlify recycles instances frequently enough that this is
-// effectively a "warm" cache rather than a stale-data risk.
-const CATALOG_TTL_MS = 5 * 60 * 1000;
-let catalogCache: { rows: CatalogSkill[]; loadedAt: number } | null = null;
-
-async function loadCatalog(): Promise<CatalogSkill[]> {
-  if (catalogCache && Date.now() - catalogCache.loadedAt < CATALOG_TTL_MS) {
-    return catalogCache.rows;
-  }
-  const supabase = getSupabase();
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('skills_catalog')
-    .select('slug, display_name, description, install_count, skills_sh_url, install_command');
-  if (error) {
-    console.error('[/api/skills-relevant] catalog load failed:', error.message);
-    return [];
-  }
-  const rows = (data ?? []) as CatalogSkill[];
-  catalogCache = { rows, loadedAt: Date.now() };
-  return rows;
-}
+import { retrieveSkills } from '../lib/skillsRetrieval';
 
 export default async (req: Request, _context: Context): Promise<Response> => {
-  if (req.method !== 'GET') {
-    return jsonResponse(405, { error: 'Method not allowed' });
-  }
+  if (req.method !== 'GET') return json(405, { error: 'Method not allowed' });
   const url = new URL(req.url);
   const term = url.searchParams.get('term')?.trim() ?? '';
-  const pathParam = url.searchParams.get('path') ?? '';
-  const path = pathParam ? pathParam.split('|').map((s) => s.trim()).filter(Boolean) : [];
-  if (!term) return jsonResponse(400, { error: 'Missing term' });
+  if (!term) return json(400, { error: 'Missing term' });
 
   try {
-    const catalog = await loadCatalog();
-    const candidates = scoreCandidates({ term, path, catalog });
-    return jsonResponse(200, { candidates });
+    const candidates = await retrieveSkills({ term });
+    return json(200, { candidates });
   } catch (e) {
     console.error('[/api/skills-relevant] handler error', e);
-    return jsonResponse(500, { error: e instanceof Error ? e.message : 'Server error' });
+    return json(500, { error: e instanceof Error ? e.message : 'Server error' });
   }
 };
 
-function jsonResponse(status: number, body: object): Response {
+function json(status: number, body: object): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json' },

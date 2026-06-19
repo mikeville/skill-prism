@@ -1,34 +1,11 @@
 // Vite middleware that handles /api/skills-relevant in dev. Mirrors the
-// Netlify Function in netlify/functions/skills-relevant.ts. Reads from the
-// same Supabase service-role client as handleSearch.
+// Netlify Function in netlify/functions/skills-relevant.ts.
 //
 // Production unchanged: served by the Netlify Function.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { loadEnv, type Plugin } from 'vite';
-import { getSupabase } from '../netlify/lib/db';
-import { scoreCandidates, type CatalogSkill } from '../netlify/lib/skillsRetrieval';
-
-const CATALOG_TTL_MS = 5 * 60 * 1000;
-let catalogCache: { rows: CatalogSkill[]; loadedAt: number } | null = null;
-
-async function loadCatalog(): Promise<CatalogSkill[]> {
-  if (catalogCache && Date.now() - catalogCache.loadedAt < CATALOG_TTL_MS) {
-    return catalogCache.rows;
-  }
-  const supabase = getSupabase();
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('skills_catalog')
-    .select('slug, display_name, description, install_count, skills_sh_url, install_command');
-  if (error) {
-    console.error('[/api/skills-relevant] catalog load failed:', error.message);
-    return [];
-  }
-  const rows = (data ?? []) as CatalogSkill[];
-  catalogCache = { rows, loadedAt: Date.now() };
-  return rows;
-}
+import { retrieveSkills } from '../netlify/lib/skillsRetrieval';
 
 export function apiSkillsRelevantProxy(): Plugin {
   return {
@@ -36,22 +13,19 @@ export function apiSkillsRelevantProxy(): Plugin {
     apply: 'serve',
     configResolved(config) {
       const env = loadEnv(config.mode, config.root, '');
-      for (const k of ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY']) {
+      for (const k of ['SKILLS_PROXY_URL', 'SKILLS_PROXY_SECRET']) {
         if (env[k] && !process.env[k]) process.env[k] = env[k];
       }
     },
     configureServer(server) {
-      server.middlewares.use('/api/skills-relevant', async (req, res) => {
+      server.middlewares.use('/api/skills-relevant', async (req: IncomingMessage, res: ServerResponse) => {
         if (req.method !== 'GET') return jsonResponse(res, 405, { error: 'Method not allowed' });
         const fullUrl = new URL(req.url ?? '/', 'http://localhost');
         const term = fullUrl.searchParams.get('term')?.trim() ?? '';
-        const pathParam = fullUrl.searchParams.get('path') ?? '';
-        const path = pathParam ? pathParam.split('|').map((s) => s.trim()).filter(Boolean) : [];
         if (!term) return jsonResponse(res, 400, { error: 'Missing term' });
 
         try {
-          const catalog = await loadCatalog();
-          const candidates = scoreCandidates({ term, path, catalog });
+          const candidates = await retrieveSkills({ term });
           return jsonResponse(res, 200, { candidates });
         } catch (e) {
           console.error('[/api/skills-relevant] error', e);
