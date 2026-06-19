@@ -27,8 +27,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write .",
-    "scrape:skills": "tsx scripts/scrape-skills.ts"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@fontsource-variable/anybody": "^5.2.7",
